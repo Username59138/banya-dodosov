@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Баня Додов 🔥</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a0000 0%, #4a1010 50%, #1a0000 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            border: 4px solid #ff6b35;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 107, 53, 0.5);
+        }
+        
+        .steam {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: steamRise 2s infinite;
+        }
+        
+        @keyframes steamRise {
+            0% { transform: translateY(0) scale(1); opacity: 0.5; }
+            100% { transform: translateY(-100px) scale(2); opacity: 0; }
+        }
+        
+        .pulse {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
+        
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .speech-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 10px;
+            color: #333;
+            max-width: 150px;
+            animation: bubblePop 0.3s ease-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.95) transparent transparent;
+        }
+        
+        .speech-bubble.enemy {
+            background: rgba(255, 100, 100, 0.95);
+            color: #500;
+        }
+        
+        .speech-bubble.enemy::after {
+            border-color: rgba(255, 100, 100, 0.95) transparent transparent;
+        }
+        
+        @keyframes bubblePop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes bubbleFade {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <!-- Start Screen -->
+    <div id="startScreen" class="text-center">
+        <h1 class="text-3xl md:text-5xl text-orange-500 mb-8 glow">🔥 БАНЯ ДОДОВ 🔥</h1>
+        <p class="text-white text-xs md:text-sm mb-4">Ты - "Ч". Зайди в баню и стань легендой!</p>
+        <p class="text-yellow-300 text-xs mb-6">Управление: WASD или стрелки</p>
+        <button onclick="startGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110">
+            ВОЙТИ В БАНЮ
+        </button>
+        <div class="mt-8 text-xs text-gray-400">
+            <p>⚠️ С каждой формой СЛОЖНЕЕ!</p>
+            <p class="mt-2">Больше врагов, атак и хаоса!</p>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden flex-col items-center">
+        <div class="flex justify-between w-full max-w-2xl mb-4 px-2">
+            <div class="text-white text-xs">
+                <span class="text-orange-400">ФОРМА:</span> 
+                <span id="playerForm" class="text-yellow-300">Ч</span>
+            </div>
+            <div class="text-white text-xs">
+                <span class="text-red-400">🌡️</span> 
+                <span id="temperature" class="text-red-300">0</span>°C
+            </div>
+            <div class="text-white text-xs">
+                <span class="text-green-400">❤️</span> 
+                <span id="health" class="text-green-300">100</span>
+            </div>
+            <div class="text-white text-xs">
+                <span class="text-purple-400">LVL:</span> 
+                <span id="level" class="text-purple-300">1</span>
+            </div>
+        </div>
+        
+        <div class="relative">
+            <canvas id="gameCanvas" width="700" height="500"></canvas>
+            <div id="steamContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            <div id="speechContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <p class="text-orange-300 text-xs" id="enemyInfo">Готовься к бою!</p>
+            <div class="w-full bg-gray-700 rounded-full h-4 mt-2" style="width: 300px;">
+                <div id="tempBar" class="bg-gradient-to-r from-orange-500 to-red-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p class="text-gray-400 text-xs mt-1">До трансформации: <span id="nextForm">1000°C</span></p>
+            <p class="text-red-400 text-xs mt-1" id="difficultyInfo">Сложность: ★☆☆☆☆☆☆☆☆</p>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="hidden text-center">
+        <h2 class="text-4xl text-red-500 mb-4 glow">💀 СГОРЕЛ! 💀</h2>
+        <p class="text-white text-sm mb-2">Достигнутая форма: <span id="finalForm" class="text-yellow-300"></span></p>
+        <p class="text-orange-300 text-sm mb-2">Максимальная температура: <span id="finalTemp"></span>°C</p>
+        <p class="text-purple-300 text-sm mb-6">Уровень сложности: <span id="finalLevel"></span></p>
+        <button onclick="restartGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110">
+            СНОВА В БАНЮ
+        </button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="hidden text-center">
+        <h2 class="text-3xl text-yellow-400 mb-4 glow pulse">👑 ЛЕГЕНДА БАНИ! 👑</h2>
+        <p class="text-white text-sm mb-2">Ты стал:</p>
+        <p class="text-2xl text-orange-400 mb-6 glow">Ультра Омега Супер Прапрапрадодос!</p>
+        <p class="text-green-300 text-sm mb-6">Ты победил ВСЕ уровни сложности!</p>
+        <button onclick="restartGame()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110">
+            НАЧАТЬ ЗАНОВО
+        </button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Фразы игрока
+        const PLAYER_PHRASES = [
+            "Я уже красный!",
+            "Ещё посидим, нормально",
+            "Нормально, терпимо!"
+        ];
+        
+        // Фразы врагов
+        const ENEMY_PHRASES = [
+            "Ты бл*дь, д*лбаёб нах*й?",
+            "Я уже синий!",
+            "Повысь температуру!"
+        ];
+        
+        const FORMS = [
+            { name: 'Сыр', color: '#ffff00', size: 12, targetTemp: 1000 },
+            { name: 'Ч', color: '#ffffff', size: 18, targetTemp: 5000 },
+            { name: 'Батч', color: '#ffffaa', size: 20, targetTemp: 10000 },
+            { name: 'Дод', color: '#ffa500', size: 22, targetTemp: 50000 },
+            { name: 'Прадод', color: '#ff6b35', size: 24, targetTemp: 150000 },
+            { name: 'Прапрадод', color: '#ff4500', size: 26, targetTemp: 400000 },
+            { name: 'Супер Прапрадод', color: '#ff0000', size: 28, targetTemp: 800000 },
+            { name: 'Додос', color: '#ff00ff', size: 30, targetTemp: 1500000 },
+            { name: 'Ультрадодос', color: '#00ffff', size: 32, targetTemp: 3000000 },
+            { name: 'Ультра Омега Супер Прапрапрадодос', color: '#ffd700', size: 35, targetTemp: Infinity }
+        ];
+        
+        // Сложность увеличивается с каждой формой
+        const DIFFICULTY = [
+            { // Уровень 1 - Ч
+                enemies: 1,
+                attackSpeed: 2000,
+                projectileSpeed: 2,
+                projectilesPerAttack: 1,
+                damage: 8,
+                patterns: ['aimed'],
+                specialAttackChance: 0,
+                enemyMoveSpeed: 0.01
+            },
+            { // Уровень 2 - Батч
+                enemies: 1,
+                attackSpeed: 1600,
+                projectileSpeed: 2.5,
+                projectilesPerAttack: 2,
+                damage: 10,
+                patterns: ['aimed', 'spread3'],
+                specialAttackChance: 0.1,
+                enemyMoveSpeed: 0.015
+            },
+            { // Уровень 3 - Дод
+                enemies: 2,
+                attackSpeed: 1400,
+                projectileSpeed: 3,
+                projectilesPerAttack: 2,
+                damage: 12,
+                patterns: ['aimed', 'spread3', 'circle'],
+                specialAttackChance: 0.15,
+                enemyMoveSpeed: 0.02
+            },
+            { // Уровень 4 - Прадод
+                enemies: 2,
+                attackSpeed: 1200,
+                projectileSpeed: 3.5,
+                projectilesPerAttack: 3,
+                damage: 14,
+                patterns: ['aimed', 'spread5', 'circle', 'wave'],
+                specialAttackChance: 0.2,
+                enemyMoveSpeed: 0.025
+            },
+            { // Уровень 5 - Прапрадод
+                enemies: 3,
+                attackSpeed: 1000,
+                projectileSpeed: 4,
+                projectilesPerAttack: 3,
+                damage: 16,
+                patterns: ['spread5', 'circle', 'wave', 'spiral'],
+                specialAttackChance: 0.25,
+                enemyMoveSpeed: 0.03
+            },
+            { // Уровень 6 - Супер Прапрадод
+                enemies: 3,
+                attackSpeed: 800,
+                projectileSpeed: 4.5,
+                projectilesPerAttack: 4,
+                damage: 18,
+                patterns: ['spread5', 'circle', 'wave', 'spiral', 'cross'],
+                specialAttackChance: 0.3,
+                enemyMoveSpeed: 0.035
+            },
+            { // Уровень 7 - Додос
+                enemies: 4,
+                attackSpeed: 600,
+                projectileSpeed: 5,
+                projectilesPerAttack: 4,
+                damage: 20,
+                patterns: ['circle', 'wave', 'spiral', 'cross', 'burst'],
+                specialAttackChance: 0.35,
+                enemyMoveSpeed: 0.04
+            },
+            { // Уровень 8 - Ультрадодос
+                enemies: 4,
+                attackSpeed: 450,
+                projectileSpeed: 5.5,
+                projectilesPerAttack: 5,
+                damage: 25,
+                patterns: ['spiral', 'cross', 'burst', 'chaos'],
+                specialAttackChance: 0.4,
+                enemyMoveSpeed: 0.045
+            },
+            { // Уровень 9 - ФИНАЛ
+                enemies: 5,
+                attackSpeed: 300,
+                projectileSpeed: 6,
+                projectilesPerAttack: 6,
+                damage: 30,
+                patterns: ['chaos', 'apocalypse'],
+                specialAttackChance: 0.5,
+                enemyMoveSpeed: 0.05
+            }
+        ];
+        
+        const ENEMY_TYPES = [
+            { name: 'Дод', emoji: '🔥', color: '#8b4513' },
+            { name: 'Прадод', emoji: '👴🔥', color: '#654321' },
+            { name: 'Прапрадод', emoji: '👴👴', color: '#4a3520' },
+            { name: 'Супер Прапрадод', emoji: '⭐👴', color: '#3d2914' },
+            { name: 'Додос', emoji: '🦤', color: '#2d1f0f' },
+            { name: 'Ультрадодос', emoji: '💀🦤', color: '#1a1209' },
+            { name: 'Ультра Омега', emoji: '🌟💀', color: '#0a0604' },
+            { name: 'БОСС БАНИ', emoji: '👑🔥', color: '#000000' },
+            { name: 'БОГ ПАРА', emoji: '☠️👑', color: '#220000' }
+        ];
+        
+        let game = {
+            running: false,
+            player: null,
+            temperature: 0,
+            enemies: [],
+            projectiles: [],
+            particles: [],
+            keys: {},
+            tempRate: 10,
+            screenShake: 0,
+            lastPlayerPhrase: 0,
+            lastEnemyPhrase: 0
+        };
+        
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            game.keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            game.keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Функция показа речевого пузыря
+        function showSpeechBubble(x, y, text, isEnemy = false) {
+            const container = document.getElementById('speechContainer');
+            const bubble = document.createElement('div');
+            bubble.className = `speech-bubble ${isEnemy ? 'enemy' : ''}`;
+            bubble.textContent = text;
+            
+            // Позиционирование относительно canvas
+            const canvasRect = canvas.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            bubble.style.left = `${x - 30}px`;
+            bubble.style.top = `${y - 50}px`;
+            
+            container.appendChild(bubble);
+            
+            // Удаляем через 2 секунды с анимацией
+            setTimeout(() => {
+                bubble.style.animation = 'bubbleFade 0.5s ease-out forwards';
+                setTimeout(() => bubble.remove(), 500);
+            }, 2000);
+        }
+        
+        // Фраза игрока
+        function playerSpeak() {
+            if (!game.running) return;
+            const phrase = PLAYER_PHRASES[Math.floor(Math.random() * PLAYER_PHRASES.length)];
+            showSpeechBubble(game.player.x, game.player.y, phrase, false);
+        }
+        
+        // Фраза врага
+        function enemySpeak(enemy) {
+            if (!game.running) return;
+            const phrase = ENEMY_PHRASES[Math.floor(Math.random() * ENEMY_PHRASES.length)];
+            showSpeechBubble(enemy.x, enemy.y, phrase, true);
+        }
+        
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('gameScreen').classList.add('flex');
+            
+            // Очищаем пузыри
+            document.getElementById('speechContainer').innerHTML = '';
+            
+            game = {
+                running: true,
+                player: { x: 100, y: 250, vx: 0, vy: 0, health: 100, formIndex: 0, invincible: 0 },
+                temperature: 0,
+                enemies: [],
+                projectiles: [],
+                particles: [],
+                keys: {},
+                tempRate: 50, // УВЕЛИЧЕНО В 5 РАЗ (было 10)
+                screenShake: 0,
+                lastPlayerPhrase: Date.now(),
+                lastEnemyPhrase: Date.now()
+            };
+            
+            spawnEnemies();
+            updateUI();
+            gameLoop();
+            
+            // Первая фраза игрока
+            setTimeout(() => playerSpeak(), 1000);
+        }
+        
+        function spawnEnemies() {
+            game.enemies = [];
+            const diff = DIFFICULTY[game.player.formIndex];
+            const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
+            
+            for (let i = 0; i < diff.enemies; i++) {
+                game.enemies.push({
+                    x: canvas.width - 80,
+                    y: 100 + (i * (canvas.height - 200) / Math.max(1, diff.enemies - 1)),
+                    targetY: 100 + Math.random() * (canvas.height - 200),
+                    lastAttack: Date.now() + i * 500,
+                    type: enemyType,
+                    size: 35 + game.player.formIndex * 3,
+                    angle: 0
+                });
+            }
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('victoryScreen').classList.add('hidden');
+            startGame();
+        }
+        
+        function updateUI() {
+            const form = FORMS[game.player.formIndex];
+            document.getElementById('playerForm').textContent = form.name;
+            document.getElementById('temperature').textContent = Math.floor(game.temperature).toLocaleString();
+            document.getElementById('health').textContent = Math.max(0, Math.floor(game.player.health));
+            document.getElementById('level').textContent = game.player.formIndex + 1;
+            
+            const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
+            const diff = DIFFICULTY[game.player.formIndex];
+            document.getElementById('enemyInfo').textContent = `Враги: ${diff.enemies}x ${enemyType.emoji} ${enemyType.name}`;
+            
+            const progress = (game.temperature / form.targetTemp) * 100;
+            document.getElementById('tempBar').style.width = Math.min(100, progress) + '%';
+            document.getElementById('nextForm').textContent = form.targetTemp === Infinity ? '∞' : form.targetTemp.toLocaleString() + '°C';
+            
+            // Difficulty stars
+            const stars = '★'.repeat(game.player.formIndex + 1) + '☆'.repeat(8 - game.player.formIndex);
+            document.getElementById('difficultyInfo').textContent = `Сложность: ${stars}`;
+        }
+        
+        function gameLoop() {
+            if (!game.running) return;
+            
+            update();
+            render();
+            updateUI();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function createAttackPattern(enemy, pattern, diff) {
+            const angle = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
+            
+            switch(pattern) {
+                case 'aimed':
+                    game.projectiles.push(createProjectile(enemy.x, enemy.y, angle, diff));
+                    break;
+                    
+                case 'spread3':
+                    for (let i = -1; i <= 1; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + i * 0.3, diff));
+                    }
+                    break;
+                    
+                case 'spread5':
+                    for (let i = -2; i <= 2; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + i * 0.25, diff));
+                    }
+                    break;
+                    
+                case 'circle':
+                    for (let i = 0; i < 8; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 8) * i, diff));
+                    }
+                    break;
+                    
+                case 'wave':
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            if (game.running) {
+                                game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + Math.sin(Date.now() / 100) * 0.5, diff));
+                            }
+                        }, i * 100);
+                    }
+                    break;
+                    
+                case 'spiral':
+                    enemy.angle = (enemy.angle || 0) + 0.5;
+                    for (let i = 0; i < 3; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, enemy.angle + (Math.PI * 2 / 3) * i, diff));
+                    }
+                    break;
+                    
+                case 'cross':
+                    for (let i = 0; i < 4; i++) {
+                        const crossAngle = (Math.PI / 2) * i;
+                        for (let j = 0; j < 3; j++) {
+                            setTimeout(() => {
+                                if (game.running) {
+                                    game.projectiles.push(createProjectile(enemy.x, enemy.y, crossAngle, diff));
+                                }
+                            }, j * 150);
+                        }
+                    }
+                    break;
+                    
+                case 'burst':
+                    for (let i = 0; i < 12; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 12) * i, diff));
+                    }
+                    setTimeout(() => {
+                        if (game.running) {
+                            for (let i = 0; i < 12; i++) {
+                                game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 12) * i + 0.26, diff));
+                            }
+                        }
+                    }, 200);
+                    break;
+                    
+                case 'chaos':
+                    for (let i = 0; i < 8; i++) {
+                        const chaosAngle = Math.random() * Math.PI * 2;
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, chaosAngle, diff));
+                    }
+                    break;
+                    
+                case 'apocalypse':
+                    // Massive attack pattern
+                    for (let i = 0; i < 16; i++) {
+                        game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 16) * i, diff));
+                    }
+                    for (let wave = 1; wave <= 3; wave++) {
+                        setTimeout(() => {
+                            if (game.running) {
+                                for (let i = 0; i < 16; i++) {
+                                    game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 16) * i + wave * 0.2, diff));
+                                }
+                            }
+                        }, wave * 150);
+                    }
+                    break;
+            }
+        }
+        
+        function createProjectile(x, y, angle, diff) {
+            return {
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * diff.projectileSpeed,
+                vy: Math.sin(angle) * diff.projectileSpeed,
+                size: 6 + game.player.formIndex,
+                damage: diff.damage
+            };
+        }
+        
+        function update() {
+            const form = FORMS[game.player.formIndex];
+            const diff = DIFFICULTY[game.player.formIndex];
+            
+            // Player movement - slightly faster to help with difficulty
+            const speed = 5 + game.player.formIndex * 0.3;
+            
+            if (game.keys['w'] || game.keys['arrowup']) game.player.vy = -speed;
+            else if (game.keys['s'] || game.keys['arrowdown']) game.player.vy = speed;
+            else game.player.vy *= 0.85;
+            
+            if (game.keys['a'] || game.keys['arrowleft']) game.player.vx = -speed;
+            else if (game.keys['d'] || game.keys['arrowright']) game.player.vx = speed;
+            else game.player.vx *= 0.85;
+            
+            game.player.x += game.player.vx;
+            game.player.y += game.player.vy;
+            
+            // Boundaries
+            game.player.x = Math.max(form.size, Math.min(canvas.width - form.size - 150, game.player.x));
+            game.player.y = Math.max(form.size, Math.min(canvas.height - form.size, game.player.y));
+            
+            // Increase temperature (УВЕЛИЧЕНО В 5 РАЗ - теперь tempRate = 50 вместо 10)
+            game.temperature += (game.tempRate + game.player.formIndex * 25) / 60;
+            
+            // Периодические фразы игрока (каждые 3-6 секунд)
+            if (Date.now() - game.lastPlayerPhrase > 3000 + Math.random() * 3000) {
+                game.lastPlayerPhrase = Date.now();
+                playerSpeak();
+            }
+            
+            // Check for transformation
+            if (game.temperature >= form.targetTemp) {
+                if (game.player.formIndex < FORMS.length - 1) {
+                    game.player.formIndex++;
+                    game.player.invincible = 180; // Longer invincibility on transform
+                    game.player.health = Math.min(100, game.player.health + 30); // Heal on transform
+                    game.tempRate *= 1.8; // Ускорение роста температуры при трансформации
+                    
+                    // Respawn enemies with new difficulty
+                    spawnEnemies();
+                    
+                    // Transformation particles
+                    for (let i = 0; i < 50; i++) {
+                        game.particles.push({
+                            x: game.player.x,
+                            y: game.player.y,
+                            vx: (Math.random() - 0.5) * 15,
+                            vy: (Math.random() - 0.5) * 15,
+                            life: 90,
+                            color: FORMS[game.player.formIndex].color
+                        });
+                    }
+                    
+                    game.screenShake = 20;
+                    
+                    // Фраза при трансформации
+                    setTimeout(() => {
+                        if (game.running) {
+                            showSpeechBubble(game.player.x, game.player.y, "Я ЭВОЛЮЦИОНИРУЮ!", false);
+                        }
+                    }, 100);
+                    
+                    // Check victory
+                    if (game.player.formIndex === FORMS.length - 1) {
+                        setTimeout(() => {
+                            game.running = false;
+                            document.getElementById('gameScreen').classList.add('hidden');
+                            document.getElementById('victoryScreen').classList.remove('hidden');
+                        }, 2000);
+                    }
+                }
+            }
+            
+            // Enemy behavior
+            game.enemies.forEach((enemy, idx) => {
+                // Move enemy
+                if (Math.abs(enemy.y - enemy.targetY) < 10) {
+                    enemy.targetY = 50 + Math.random() * (canvas.height - 100);
+                }
+                enemy.y += (enemy.targetY - enemy.y) * diff.enemyMoveSpeed;
+                
+                // Horizontal movement at higher levels
+                if (game.player.formIndex >= 4) {
+                    enemy.x = canvas.width - 80 + Math.sin(Date.now() / 500 + idx) * 30;
+                }
+                
+                // Attack
+                if (Date.now() - enemy.lastAttack > diff.attackSpeed) {
+                    enemy.lastAttack = Date.now();
+                    
+                    // Choose attack pattern
+                    const patterns = diff.patterns;
+                    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+                    createAttackPattern(enemy, pattern, diff);
+                    
+                    // Фраза врага при атаке (с шансом 15%)
+                    if (Math.random() < 0.15 && Date.now() - game.lastEnemyPhrase > 2000) {
+                        game.lastEnemyPhrase = Date.now();
+                        enemySpeak(enemy);
+                    }
+                    
+                    // Special attack chance
+                    if (Math.random() < diff.specialAttackChance) {
+                        setTimeout(() => {
+                            if (game.running) {
+                                const specialPattern = patterns[patterns.length - 1];
+                                createAttackPattern(enemy, specialPattern, diff);
+                            }
+                        }, 300);
+                    }
+                }
+            });
+            
+            // Update projectiles
+            game.projectiles = game.projectiles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Check collision with player
+                if (game.player.invincible <= 0) {
+                    const dx = p.x - game.player.x;
+                    const dy = p.y - game.player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < form.size + p.size) {
+                        game.player.health -= p.damage;
+                        game.player.invincible = 20;
+                        game.screenShake = 10;
+                        
+                        // Фраза при получении урона (с шансом 25%)
+                        if (Math.random() < 0.25) {
+                            const hitPhrases = [
+                                "Ай, бл*ть!",
+                                "Сука!",
+                                "Больно!",
+                                "Ты бл*дь, д*лбаёб нах*й?",
+                                "П*здец!",
+                                "Нах*р!"
+                            ];
+                            showSpeechBubble(game.player.x, game.player.y, hitPhrases[Math.floor(Math.random() * hitPhrases.length)], false);
+                        }
+                        
+                        // Hit particles
+                        for (let i = 0; i < 15; i++) {
+                            game.particles.push({
+                                x: game.player.x,
+                                y: game.player.y,
+                                vx: (Math.random() - 0.5) * 8,
+                                vy: (Math.random() - 0.5) * 8,
+                                life: 30,
+                                color: '#ff0000'
+                            });
+                        }
+                        
+                        if (game.player.health <= 0) {
+                            gameOver();
+                        }
+                        return false;
+                    }
+                }
+                
+                return p.x > -50 && p.x < canvas.width + 50 && p.y > -50 && p.y < canvas.height + 50;
+            });
+            
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life--;
+                return p.life > 0;
+            });
+            
+            // Update invincibility and screen shake
+            if (game.player.invincible > 0) game.player.invincible--;
+            if (game.screenShake > 0) game.screenShake--;
+        }
+        
+        function render() {
+            // Screen shake
+            ctx.save();
+            if (game.screenShake > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.screenShake,
+                    (Math.random() - 0.5) * game.screenShake
+                );
+            }
+            
+            // Background
+            const heat = Math.min(1, game.temperature / 1000000);
+            const formHeat = game.player.formIndex / 8;
+            ctx.fillStyle = `rgb(${40 + (heat + formHeat) * 80}, ${20 - heat * 15}, ${20 - heat * 15})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Danger zone indicator (right side where enemies are)
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.05 + formHeat * 0.1})`;
+            ctx.fillRect(canvas.width - 200, 0, 200, canvas.height);
+            
+            // Steam effect
+            const steamCount = 3 + game.player.formIndex * 2;
+            for (let i = 0; i < steamCount; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.02 + heat * 0.08})`;
+                ctx.beginPath();
+                ctx.arc(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    15 + Math.random() * 40,
+                    0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+            
+            // Draw particles
+            game.particles.forEach(p => {
+                ctx.globalAlpha = p.life / 90;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4 + (90 - p.life) / 20, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // Draw projectiles
+            game.projectiles.forEach(p => {
+                // Outer glow
+                ctx.shadowColor = '#ff4500';
+                ctx.shadowBlur = 10;
+                
+                ctx.fillStyle = '#ff4500';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+            });
+            
+            // Draw enemies
+            game.enemies.forEach((enemy, idx) => {
+                const pulseSize = Math.sin(Date.now() / 200 + idx) * 3;
+                
+                // Enemy glow
+                ctx.shadowColor = '#ff0000';
+                ctx.shadowBlur = 20 + game.player.formIndex * 3;
+                
+                ctx.fillStyle = enemy.type.color;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size + pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner circle
+                ctx.fillStyle = `rgba(255, 100, 0, 0.5)`;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                // Enemy emoji
+                ctx.font = `${18 + game.player.formIndex * 2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(enemy.type.emoji, enemy.x, enemy.y);
+            });
+            
+            // Draw player
+            const form = FORMS[game.player.formIndex];
+            
+            if (game.player.invincible <= 0 || Math.floor(game.player.invincible / 4) % 2 === 0) {
+                // Player glow
+                ctx.shadowColor = form.color;
+                ctx.shadowBlur = 20 + game.player.formIndex * 5;
+                
+                // Outer ring for higher forms
+                if (game.player.formIndex >= 3) {
+                    ctx.strokeStyle = form.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(game.player.x, game.player.y, form.size + 8 + Math.sin(Date.now() / 100) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = form.color;
+                ctx.beginPath();
+                ctx.arc(game.player.x, game.player.y, form.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                // Player name
+                ctx.fillStyle = '#000';
+                ctx.font = `bold ${Math.min(form.size - 4, 12)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const displayName = form.name.length > 8 ? form.name.substring(0, 7) + '..' : form.name;
+                ctx.fillText(displayName, game.player.x, game.player.y);
+            }
+            
+            // Health bar
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, 10, 150, 15);
+            const healthColor = game.player.health > 50 ? '#00ff00' : game.player.health > 25 ? '#ffff00' : '#ff0000';
+            ctx.fillStyle = healthColor;
+            ctx.fillRect(10, 10, Math.max(0, game.player.health * 1.5), 15);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 150, 15);
+            
+            // Temperature display
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px "Press Start 2P"';
+            ctx.textAlign = 'left';
+            ctx.fillText(`🌡️ ${Math.floor(game.temperature).toLocaleString()}°C`, 10, 42);
+            
+            // Level/Form indicator
+            ctx.fillStyle = form.color;
+            ctx.fillText(`${form.name}`, 10, 58);
+            
+            ctx.restore();
+        }
+        
+        function gameOver() {
+            game.running = false;
+            
+            // Финальная фраза
+            showSpeechBubble(game.player.x, game.player.y, "Я СГОРЕЛ!!!", false);
+            
+            setTimeout(() => {
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+                document.getElementById('finalForm').textContent = FORMS[game.player.formIndex].name;
+                document.getElementById('finalTemp').textContent = Math.floor(game.temperature).toLocaleString();
+                document.getElementById('finalLevel').textContent = `${game.player.formIndex + 1}/9`;
+            }, 500);
+        }
+        
+        // Steam effects
+        function createSteam() {
+            if (!game.running) return;
+            
+            const container = document.getElementById('steamContainer');
+            const steam = document.createElement('div');
+            steam.className = 'steam';
+            steam.style.left = Math.random() * 100 + '%';
+            steam.style.bottom = '0';
+            steam.style.animationDelay = Math.random() * 2 + 's';
+            container.appendChild(steam);
+            
+            setTimeout(() => steam.remove(), 2000);
+        }
+        
+        setInterval(createSteam, 300);
+    </script>
+</body>
+</html>
