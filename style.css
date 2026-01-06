@@ -174,6 +174,32 @@
             }
         }
         
+        /* Pause button */
+        #pauseBtn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 107, 53, 0.8);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: none;
+        }
+        
+        #pauseBtn:hover {
+            background: rgba(255, 107, 53, 1);
+            transform: scale(1.1);
+        }
+        
+        #pauseBtn.visible {
+            display: block;
+        }
+
         /* Shop Styles */
         #shopModal {
             position: fixed;
@@ -218,7 +244,111 @@
             border-color: #ff6b35;
             box-shadow: none;
         }
+
+        /* Pause Menu Styles */
+        #pauseModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
         
+        #pauseModal.hidden {
+            display: none !important;
+        }
+        
+        #pauseModal:not(.hidden) {
+            display: flex;
+        }
+        
+        .pause-menu {
+            background: linear-gradient(135deg, #1a0a00, #3d1a0a);
+            border: 4px solid #ff6b35;
+            border-radius: 20px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 107, 53, 0.5), inset 0 0 30px rgba(255, 107, 53, 0.1);
+            animation: pauseAppear 0.3s ease-out;
+        }
+        
+        @keyframes pauseAppear {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .pause-title {
+            font-size: 24px;
+            color: #ff6b35;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ff6b35;
+        }
+        
+        .pause-subtitle {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+        
+        .pause-btn {
+            display: block;
+            width: 100%;
+            padding: 15px 30px;
+            margin: 10px 0;
+            border: 2px solid #ff6b35;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #4a1a0a, #2a0a00);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .pause-btn:hover {
+            background: linear-gradient(135deg, #ff6b35, #ff4500);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.7);
+        }
+        
+        .pause-btn.resume {
+            background: linear-gradient(135deg, #2a5a0a, #1a3a00);
+            border-color: #4CAF50;
+        }
+        
+        .pause-btn.resume:hover {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.7);
+        }
+        
+        .pause-btn.quit {
+            background: linear-gradient(135deg, #5a1a1a, #3a0a0a);
+            border-color: #f44336;
+        }
+        
+        .pause-btn.quit:hover {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.7);
+        }
+        
+        .pause-stats {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ff6b35;
+            font-size: 10px;
+        }
+        
+        .pause-stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            color: #ccc;
+        }
+        
+        .pause-stat-value {
+            color: #ffd700;
+        }
         /* Shield button for mobile */
         #shieldBtn {
             position: fixed;
