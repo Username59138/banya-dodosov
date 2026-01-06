@@ -206,7 +206,7 @@
         
         // Shield activation
         function activateShield() {
-            if (!game.running) return;
+            if (!game.running || game.paused) return;
             if (game.shieldCooldown > 0) return;
             
             game.shieldActive = getShieldDuration() * 60; // Convert to frames
@@ -228,12 +228,84 @@
             if (e.key === ' ') {
                 activateShield();
             }
+            if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+                if (game.running || game.paused) {
+                    togglePause();
+                }
+            }
         });
         
         document.addEventListener('keyup', (e) => {
             game.keys[e.key.toLowerCase()] = false;
         });
         
+        // Pause functions
+        function togglePause() {
+            if (!game.running && !game.paused) return;
+            
+            game.paused = !game.paused;
+            
+            const pauseModal = document.getElementById('pauseModal');
+            
+            if (game.paused) {
+                // Pause the game
+                game.pauseTime = Date.now();
+                pauseModal.classList.remove('hidden');
+                
+                // Update pause stats
+                updatePauseStats();
+            } else {
+                // Resume the game
+                pauseModal.classList.add('hidden');
+                
+                // Adjust enemy attack timers for pause duration
+                const pauseDuration = Date.now() - game.pauseTime;
+                game.enemies.forEach(enemy => {
+                    enemy.lastAttack += pauseDuration;
+                });
+                game.lastPlayerPhrase += pauseDuration;
+                game.lastEnemyPhrase += pauseDuration;
+                
+                // Continue game loop
+                gameLoop();
+            }
+        }
+        
+        function updatePauseStats() {
+            const form = FORMS[game.player.formIndex];
+            document.getElementById('pauseTemp').textContent = Math.floor(game.temperature).toLocaleString() + '°C';
+            document.getElementById('pauseForm').textContent = form.name;
+            document.getElementById('pauseHealth').textContent = Math.floor(game.player.health) + '/' + game.player.maxHealth;
+            document.getElementById('pauseCoins').textContent = game.sessionCoins;
+            
+            // Calculate play time
+            const playTime = Math.floor((Date.now() - game.startTime) / 1000);
+            const minutes = Math.floor(playTime / 60);
+            const seconds = playTime % 60;
+            document.getElementById('pauseTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function restartFromPause() {
+            document.getElementById('pauseModal').classList.add('hidden');
+            game.paused = false;
+            game.running = false;
+            startGame();
+        }
+        
+        function quitToMenu() {
+            document.getElementById('pauseModal').classList.add('hidden');
+            game.paused = false;
+            game.running = false;
+            
+            // Save earned coins
+            saveData.coins += game.sessionCoins;
+            saveSave();
+            
+            document.getElementById('pauseBtn').classList.remove('visible');
+            goToMenu();
+        }
+        
+
         // Фразы игрока
         const PLAYER_PHRASES = [
             "Я уже красный!",
@@ -300,7 +372,9 @@
             lastEnemyPhrase: 0,
             sessionCoins: 0,
             shieldActive: 0,
-            shieldCooldown: 0
+            shieldCooldown: 0,
+            startTime: 0,
+            pauseTime: 0
         };
         
         // Функция показа речевого пузыря
@@ -344,13 +418,13 @@
         }
         
         function playerSpeak() {
-            if (!game.running) return;
+            if (!game.running || game.paused) return;
             const phrase = PLAYER_PHRASES[Math.floor(Math.random() * PLAYER_PHRASES.length)];
             showSpeechBubble(game.player.x, game.player.y, phrase, false);
         }
         
         function enemySpeak(enemy) {
-            if (!game.running) return;
+            if (!game.running || game.paused) return;
             const phrase = ENEMY_PHRASES[Math.floor(Math.random() * ENEMY_PHRASES.length)];
             showSpeechBubble(enemy.x, enemy.y, phrase, true);
         }
@@ -360,6 +434,7 @@
             document.getElementById('victoryScreen').classList.add('hidden');
             document.getElementById('gameScreen').classList.add('hidden');
             document.getElementById('startScreen').classList.remove('hidden');
+            document.getElementById('pauseBtn').classList.remove('visible');
             updateShopUI();
         }
         
@@ -367,6 +442,7 @@
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('gameScreen').classList.remove('hidden');
             document.getElementById('gameScreen').classList.add('flex');
+            document.getElementById('pauseBtn').classList.add('visible');
             
             document.getElementById('speechContainer').innerHTML = '';
             document.getElementById('coinContainer').innerHTML = '';
@@ -387,7 +463,9 @@
                 lastEnemyPhrase: Date.now(),
                 sessionCoins: 0,
                 shieldActive: 0,
-                shieldCooldown: 0
+                shieldCooldown: 0,
+                startTime: Date.now(),
+                pauseTime: 0
             };
             
             // Update shield button
@@ -460,7 +538,7 @@
         }
         
         function gameLoop() {
-            if (!game.running) return;
+            if (!game.running || game.paused) return;
             
             update();
             render();
@@ -653,7 +731,7 @@
                     
                     setTimeout(() => {
                         if (game.running) {
-                            showSpeechBubble(game.player.x, game.player.y, "Я ЭВОЛЮЦИОНИРУЮ!", false);
+                            showSpeechBubble(game.player.x, game.player.y, "Ч ЭВОЛЮЦИОНИРУЮ!", false);
                         }
                     }, 100);
                     
@@ -958,10 +1036,12 @@
             ctx.restore();
         }
         
+
+        
         function gameOver() {
             game.running = false;
             
-            showSpeechBubble(game.player.x, game.player.y, "Я СГОРЕЛ!!!", false);
+            showSpeechBubble(game.player.x, game.player.y, "Ч СГОРЕЛ!!!", false);
             
             // Save coins
             saveData.coins += game.sessionCoins;
