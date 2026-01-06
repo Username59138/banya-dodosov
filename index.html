@@ -11,6 +11,9 @@
     <!-- Fullscreen button for mobile -->
     <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ ПОЛНЫЙ ЭКРАН</button>
 
+    <!-- Pause button -->
+    <button id="pauseBtn" onclick="togglePause()">⏸️</button>
+
     <!-- Start Screen -->
     <div id="startScreen" class="text-center">
         <h1 class="text-3xl md:text-5xl text-orange-500 mb-8 glow">🔥 БАНЯ ДОДОВ 🔥</h1>
@@ -59,7 +62,7 @@
                 <!-- XP Boost -->
                 <div class="shop-item" id="shopXP" onclick="buyUpgrade('xp')">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-purple-400 text-sm">⚡ XP БУСТ</span>
+                        <span class="text-purple-400 text-sm">⚡БУСТ ТЕМПЕРАТУРЫ</span>
                         <span class="text-yellow-300 text-xs">Ур. <span id="xpLevel">0</span>/5</span>
                     </div>
                     <p class="text-gray-300 text-xs mb-2">+25% к скорости набора температуры</p>
@@ -92,6 +95,48 @@
             </button>
         </div>
     </div>
+
+ <!-- Pause Modal -->
+    <div id="pauseModal" class="hidden">
+        <div class="pause-menu">
+            <div class="pause-title">⏸️ ПАУЗА</div>
+            <div class="pause-subtitle">ESC или P - продолжить</div>
+            
+            <button class="pause-btn resume" onclick="togglePause()">
+                ▶️ ПРОДОЛЖИТЬ
+            </button>
+            <button class="pause-btn" onclick="restartFromPause()">
+                🔄 НАЧАТЬ ЗАНОВО
+            </button>
+            <button class="pause-btn quit" onclick="quitToMenu()">
+                🚪 ВЫЙТИ В МЕНЮ
+            </button>
+            
+            <div class="pause-stats">
+                <div class="pause-stat">
+                    <span>🌡️ Температура:</span>
+                    <span class="pause-stat-value" id="pauseTemp">0°C</span>
+                </div>
+                <div class="pause-stat">
+                    <span>👤 Форма:</span>
+                    <span class="pause-stat-value" id="pauseForm">Сыр</span>
+                </div>
+                <div class="pause-stat">
+                    <span>❤️ Здоровье:</span>
+                    <span class="pause-stat-value" id="pauseHealth">100</span>
+                </div>
+                <div class="pause-stat">
+                    <span>💰 Монеты:</span>
+                    <span class="pause-stat-value" id="pauseCoins">0</span>
+                </div>
+                <div class="pause-stat">
+                    <span>⏱️ Время:</span>
+                    <span class="pause-stat-value" id="pauseTime">0:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Game Screen -->
     <div id="gameScreen" class="hidden flex-col items-center">
@@ -168,6 +213,7 @@
             </button>
         </div>
     </div>
+
 
     <!-- Virtual Joystick -->
     <div id="joystickContainer">
