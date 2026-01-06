@@ -1,0 +1,270 @@
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            font-family: 'Press Start 2P', cursive;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a0000 0%, #4a1010 50%, #1a0000 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        #gameCanvas {
+            border: 4px solid #ff6b35;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 107, 53, 0.5);
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .steam {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: steamRise 2s infinite;
+        }
+        
+        @keyframes steamRise {
+            0% { transform: translateY(0) scale(1); opacity: 0.5; }
+            100% { transform: translateY(-100px) scale(2); opacity: 0; }
+        }
+        
+        .pulse {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
+        
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .speech-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 10px;
+            color: #333;
+            max-width: 150px;
+            animation: bubblePop 0.3s ease-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.95) transparent transparent;
+        }
+        
+        .speech-bubble.enemy {
+            background: rgba(255, 100, 100, 0.95);
+            color: #500;
+        }
+        
+        .speech-bubble.enemy::after {
+            border-color: rgba(255, 100, 100, 0.95) transparent transparent;
+        }
+        
+        @keyframes bubblePop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes bubbleFade {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        /* Joystick Styles */
+        #joystickContainer {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #joystickBase {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 107, 53, 0.6);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+        }
+        
+        #joystickHandle {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff6b35, #ff4500);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.7);
+        }
+        
+        #mobileControls {
+            display: none;
+        }
+        
+        /* Show joystick on touch devices */
+        @media (pointer: coarse) {
+            #joystickContainer {
+                display: block;
+            }
+            #mobileControls {
+                display: block;
+            }
+            #gameCanvas {
+                max-height: 50vh;
+            }
+        }
+        
+        /* Fullscreen button */
+        #fullscreenBtn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 107, 53, 0.8);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            font-size: 10px;
+            display: none;
+        }
+        
+        @media (pointer: coarse) {
+            #fullscreenBtn {
+                display: block;
+            }
+        }
+        
+        /* Shop Styles */
+        #shopModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #shopModal.hidden {
+            display: none !important;
+        }
+        
+        #shopModal:not(.hidden) {
+            display: flex;
+        }
+        
+        .shop-item {
+            background: linear-gradient(135deg, #2a1a0a, #3d2914);
+            border: 2px solid #ff6b35;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .shop-item:hover {
+            transform: scale(1.05);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        .shop-item.maxed {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .shop-item.maxed:hover {
+            transform: none;
+            border-color: #ff6b35;
+            box-shadow: none;
+        }
+        
+        /* Shield button for mobile */
+        #shieldBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00bfff, #0066ff);
+            border: 3px solid #fff;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+        }
+        
+        #shieldBtn.on-cooldown {
+            background: linear-gradient(135deg, #555, #333);
+            opacity: 0.6;
+        }
+        
+        @media (pointer: coarse) {
+            #shieldBtn {
+                display: flex;
+            }
+        }
+        
+        /* Coin animation */
+        @keyframes coinFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+        
+        .coin-popup {
+            position: absolute;
+            color: #ffd700;
+            font-size: 14px;
+            pointer-events: none;
+            animation: coinFloat 1s ease-out forwards;
+            text-shadow: 0 0 10px #ffd700;
+        }
+        
+        /* Shield effect */
+        @keyframes shieldPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.8); }
+            50% { box-shadow: 0 0 40px rgba(0, 191, 255, 1); }
+        }
