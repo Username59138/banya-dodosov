@@ -157,7 +157,7 @@
                 display: block;
             }
             #gameCanvas {
-                max-height: 60vh;
+                max-height: 50vh;
             }
         }
         
@@ -181,6 +181,101 @@
                 display: block;
             }
         }
+        
+        /* Shop Styles */
+        #shopModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #shopModal.hidden {
+            display: none !important;
+        }
+        
+        #shopModal:not(.hidden) {
+            display: flex;
+        }
+        
+        .shop-item {
+            background: linear-gradient(135deg, #2a1a0a, #3d2914);
+            border: 2px solid #ff6b35;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .shop-item:hover {
+            transform: scale(1.05);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        .shop-item.maxed {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .shop-item.maxed:hover {
+            transform: none;
+            border-color: #ff6b35;
+            box-shadow: none;
+        }
+        
+        /* Shield button for mobile */
+        #shieldBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00bfff, #0066ff);
+            border: 3px solid #fff;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+        }
+        
+        #shieldBtn.on-cooldown {
+            background: linear-gradient(135deg, #555, #333);
+            opacity: 0.6;
+        }
+        
+        @media (pointer: coarse) {
+            #shieldBtn {
+                display: flex;
+            }
+        }
+        
+        /* Coin animation */
+        @keyframes coinFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+        
+        .coin-popup {
+            position: absolute;
+            color: #ffd700;
+            font-size: 14px;
+            pointer-events: none;
+            animation: coinFloat 1s ease-out forwards;
+            text-shadow: 0 0 10px #ffd700;
+        }
+        
+        /* Shield effect */
+        @keyframes shieldPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.8); }
+            50% { box-shadow: 0 0 40px rgba(0, 191, 255, 1); }
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
@@ -191,14 +286,81 @@
     <div id="startScreen" class="text-center">
         <h1 class="text-3xl md:text-5xl text-orange-500 mb-8 glow">🔥 БАНЯ ДОДОВ 🔥</h1>
         <p class="text-white text-xs md:text-sm mb-4">Ты - "Сыр". Зайди в баню и стань легендой!</p>
-        <p class="text-yellow-300 text-xs mb-2">ПК: WASD или стрелки</p>
-        <p class="text-yellow-300 text-xs mb-6" id="mobileControls">📱 Телефон: Джойстик слева</p>
-        <button onclick="startGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
-            ВОЙТИ В БАНЮ
-        </button>
-        <div class="mt-8 text-xs text-gray-400">
+        <p class="text-yellow-300 text-xs mb-2">ПК: WASD или стрелки | ПРОБЕЛ - щит</p>
+        <p class="text-yellow-300 text-xs mb-6" id="mobileControls">📱 Телефон: Джойстик слева, щит справа</p>
+        
+        <div class="flex flex-col gap-4 items-center">
+            <button onclick="startGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                ВОЙТИ В БАНЮ
+            </button>
+            <button onclick="openShop()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                🛒 МАГАЗИН
+            </button>
+        </div>
+        
+        <div class="mt-6 text-yellow-400 text-sm">
+            💰 Монеты: <span id="startCoins">0</span>
+        </div>
+        
+        <div class="mt-4 text-xs text-gray-400">
             <p>⚠️ С каждой формой СЛОЖНЕЕ!</p>
-            <p class="mt-2">Больше врагов, атак и хаоса!</p>
+            <p class="mt-2">Зарабатывай монеты и улучшайся!</p>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shopModal" class="hidden">
+        <div class="bg-gradient-to-b from-gray-900 to-gray-800 p-6 rounded-2xl border-4 border-orange-500 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl text-orange-400 glow">🛒 МАГАЗИН</h2>
+                <div class="text-yellow-400 text-sm">💰 <span id="shopCoins">0</span></div>
+            </div>
+            
+            <div class="grid gap-4">
+                <!-- HP Upgrade -->
+                <div class="shop-item" id="shopHP" onclick="buyUpgrade('hp')">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-green-400 text-sm">❤️ ЗДОРОВЬЕ</span>
+                        <span class="text-yellow-300 text-xs">Ур. <span id="hpLevel">0</span>/5</span>
+                    </div>
+                    <p class="text-gray-300 text-xs mb-2">+20 к максимальному HP</p>
+                    <div class="text-yellow-400 text-sm">💰 <span id="hpCost">100</span></div>
+                </div>
+                
+                <!-- XP Boost -->
+                <div class="shop-item" id="shopXP" onclick="buyUpgrade('xp')">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-purple-400 text-sm">⚡ XP БУСТ</span>
+                        <span class="text-yellow-300 text-xs">Ур. <span id="xpLevel">0</span>/5</span>
+                    </div>
+                    <p class="text-gray-300 text-xs mb-2">+25% к скорости набора температуры</p>
+                    <div class="text-yellow-400 text-sm">💰 <span id="xpCost">150</span></div>
+                </div>
+                
+                <!-- Shield -->
+                <div class="shop-item" id="shopShield" onclick="buyUpgrade('shield')">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-cyan-400 text-sm">🛡️ ЩИТ</span>
+                        <span class="text-yellow-300 text-xs">Ур. <span id="shieldLevel">0</span>/5</span>
+                    </div>
+                    <p class="text-gray-300 text-xs mb-2">+1 сек длительности щита</p>
+                    <div class="text-yellow-400 text-sm">💰 <span id="shieldCost">200</span></div>
+                </div>
+                
+                <!-- Shield Cooldown -->
+                <div class="shop-item" id="shopCooldown" onclick="buyUpgrade('cooldown')">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-blue-400 text-sm">⏱️ ПЕРЕЗАРЯДКА</span>
+                        <span class="text-yellow-300 text-xs">Ур. <span id="cooldownLevel">0</span>/5</span>
+                    </div>
+                    <p class="text-gray-300 text-xs mb-2">-2 сек к перезарядке щита</p>
+                    <div class="text-yellow-400 text-sm">💰 <span id="cooldownCost">175</span></div>
+                </div>
+            </div>
+            
+            <button onclick="closeShop()" class="mt-6 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg text-sm transition-all">
+                ЗАКРЫТЬ
+            </button>
         </div>
     </div>
 
@@ -210,6 +372,10 @@
                 <span id="playerForm" class="text-yellow-300">Ч</span>
             </div>
             <div class="text-white text-xs">
+                <span class="text-yellow-400">💰</span> 
+                <span id="coins" class="text-yellow-300">0</span>
+            </div>
+            <div class="text-white text-xs">
                 <span class="text-red-400">🌡️</span> 
                 <span id="temperature" class="text-red-300">0</span>°C
             </div>
@@ -218,8 +384,8 @@
                 <span id="health" class="text-green-300">100</span>
             </div>
             <div class="text-white text-xs">
-                <span class="text-purple-400">LVL:</span> 
-                <span id="level" class="text-purple-300">1</span>
+                <span class="text-cyan-400">🛡️</span> 
+                <span id="shieldStatus" class="text-cyan-300">Готов</span>
             </div>
         </div>
         
@@ -227,6 +393,7 @@
             <canvas id="gameCanvas" width="700" height="500"></canvas>
             <div id="steamContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
             <div id="speechContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            <div id="coinContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
         </div>
         
         <div class="mt-4 text-center">
@@ -244,21 +411,33 @@
         <h2 class="text-4xl text-red-500 mb-4 glow">💀 СГОРЕЛ! 💀</h2>
         <p class="text-white text-sm mb-2">Достигнутая форма: <span id="finalForm" class="text-yellow-300"></span></p>
         <p class="text-orange-300 text-sm mb-2">Максимальная температура: <span id="finalTemp"></span>°C</p>
+        <p class="text-yellow-400 text-sm mb-2">Заработано монет: <span id="earnedCoins"></span> 💰</p>
         <p class="text-purple-300 text-sm mb-6">Уровень сложности: <span id="finalLevel"></span></p>
-        <button onclick="restartGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
-            СНОВА В БАНЮ
-        </button>
+        <div class="flex flex-col gap-3 items-center">
+            <button onclick="restartGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                СНОВА В БАНЮ
+            </button>
+            <button onclick="goToMenu()" class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                В МЕНЮ
+            </button>
+        </div>
     </div>
 
     <!-- Victory Screen -->
     <div id="victoryScreen" class="hidden text-center">
         <h2 class="text-3xl text-yellow-400 mb-4 glow pulse">👑 ЛЕГЕНДА БАНИ! 👑</h2>
         <p class="text-white text-sm mb-2">Ты стал:</p>
-        <p class="text-2xl text-orange-400 mb-6 glow">Ультра Омега Супер Прапрапрадодос!</p>
+        <p class="text-2xl text-orange-400 mb-4 glow">Ультра Омега Супер Прапрапрадодос!</p>
+        <p class="text-yellow-400 text-sm mb-2">Бонус за победу: +500 💰</p>
         <p class="text-green-300 text-sm mb-6">Ты победил ВСЕ уровни сложности!</p>
-        <button onclick="restartGame()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
-            НАЧАТЬ ЗАНОВО
-        </button>
+        <div class="flex flex-col gap-3 items-center">
+            <button onclick="restartGame()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                НАЧАТЬ ЗАНОВО
+            </button>
+            <button onclick="goToMenu()" class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-4 rounded-lg text-sm transition-all hover:scale-110 active:scale-95">
+                В МЕНЮ
+            </button>
+        </div>
     </div>
 
     <!-- Virtual Joystick -->
@@ -266,10 +445,121 @@
         <div id="joystickBase"></div>
         <div id="joystickHandle"></div>
     </div>
+    
+    <!-- Shield Button for Mobile -->
+    <button id="shieldBtn" onclick="activateShield()">🛡️</button>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        
+        // Save System
+        let saveData = {
+            coins: 0,
+            upgrades: {
+                hp: 0,      // Max 5 (+20 HP each)
+                xp: 0,      // Max 5 (+25% temp rate each)
+                shield: 0,  // Max 5 (+1 sec each)
+                cooldown: 0 // Max 5 (-2 sec each)
+            }
+        };
+        
+        // Load save data
+        function loadSave() {
+            const saved = localStorage.getItem('banyaDodsave');
+            if (saved) {
+                try {
+                    saveData = JSON.parse(saved);
+                } catch (e) {
+                    console.log('Save corrupted, starting fresh');
+                }
+            }
+            updateShopUI();
+        }
+        
+        function saveSave() {
+            localStorage.setItem('banyaDodsave', JSON.stringify(saveData));
+        }
+        
+        // Shop Functions
+        const UPGRADE_COSTS = {
+            hp: [1000, 2000, 4000, 8000, 15000],
+            xp: [1500, 3000, 6000, 12000, 20000],
+            shield: [2000, 4000, 8000, 16000, 30000],
+            cooldown: [1750, 3500, 7000, 14000, 25000]
+        };
+        
+        function openShop() {
+            document.getElementById('shopModal').classList.remove('hidden');
+            updateShopUI();
+        }
+        
+        function closeShop() {
+            document.getElementById('shopModal').classList.add('hidden');
+        }
+        
+        function updateShopUI() {
+            document.getElementById('startCoins').textContent = saveData.coins;
+            document.getElementById('shopCoins').textContent = saveData.coins;
+            
+            // HP
+            const hpLevel = saveData.upgrades.hp;
+            document.getElementById('hpLevel').textContent = hpLevel;
+            document.getElementById('hpCost').textContent = hpLevel >= 5 ? 'MAX' : UPGRADE_COSTS.hp[hpLevel];
+            document.getElementById('shopHP').classList.toggle('maxed', hpLevel >= 5);
+            
+            // XP
+            const xpLevel = saveData.upgrades.xp;
+            document.getElementById('xpLevel').textContent = xpLevel;
+            document.getElementById('xpCost').textContent = xpLevel >= 5 ? 'MAX' : UPGRADE_COSTS.xp[xpLevel];
+            document.getElementById('shopXP').classList.toggle('maxed', xpLevel >= 5);
+            
+            // Shield
+            const shieldLevel = saveData.upgrades.shield;
+            document.getElementById('shieldLevel').textContent = shieldLevel;
+            document.getElementById('shieldCost').textContent = shieldLevel >= 5 ? 'MAX' : UPGRADE_COSTS.shield[shieldLevel];
+            document.getElementById('shopShield').classList.toggle('maxed', shieldLevel >= 5);
+            
+            // Cooldown
+            const cooldownLevel = saveData.upgrades.cooldown;
+            document.getElementById('cooldownLevel').textContent = cooldownLevel;
+            document.getElementById('cooldownCost').textContent = cooldownLevel >= 5 ? 'MAX' : UPGRADE_COSTS.cooldown[cooldownLevel];
+            document.getElementById('shopCooldown').classList.toggle('maxed', cooldownLevel >= 5);
+        }
+        
+        function buyUpgrade(type) {
+            const level = saveData.upgrades[type];
+            if (level >= 5) return;
+            
+            const cost = UPGRADE_COSTS[type][level];
+            if (saveData.coins >= cost) {
+                saveData.coins -= cost;
+                saveData.upgrades[type]++;
+                saveSave();
+                updateShopUI();
+                
+                // Visual feedback
+                const element = document.getElementById('shop' + type.charAt(0).toUpperCase() + type.slice(1));
+                element.style.transform = 'scale(1.1)';
+                setTimeout(() => element.style.transform = '', 200);
+            }
+        }
+        
+        function getMaxHealth() {
+            return 100 + saveData.upgrades.hp * 20;
+        }
+        
+        function getXPMultiplier() {
+            return 1 + saveData.upgrades.xp * 0.25;
+        }
+        
+        function getShieldDuration() {
+            return 2 + saveData.upgrades.shield; // Base 2 sec + upgrades
+        }
+        
+        function getShieldCooldown() {
+            return 15 - saveData.upgrades.cooldown * 2; // Base 15 sec - upgrades
+        }
         
         // Joystick variables
         const joystickContainer = document.getElementById('joystickContainer');
@@ -351,7 +641,6 @@
             joystickHandle.style.left = `calc(50% + ${deltaX}px)`;
             joystickHandle.style.top = `calc(50% + ${deltaY}px)`;
             
-            // Normalize to -1 to 1 range
             joystick.moveX = deltaX / joystickMaxDistance;
             joystick.moveY = deltaY / joystickMaxDistance;
         }
@@ -366,6 +655,36 @@
             joystickHandle.style.top = '50%';
             joystickHandle.style.transform = 'translate(-50%, -50%)';
         }
+        
+        // Shield activation
+        function activateShield() {
+            if (!game.running) return;
+            if (game.shieldCooldown > 0) return;
+            
+            game.shieldActive = getShieldDuration() * 60; // Convert to frames
+            game.shieldCooldown = getShieldCooldown() * 60;
+            
+            // Visual feedback
+            const btn = document.getElementById('shieldBtn');
+            btn.classList.add('on-cooldown');
+            
+            showSpeechBubble(game.player.x, game.player.y, "ЩИТ АКТИВИРОВАН!", false);
+        }
+        
+        // Keyboard shield activation
+        document.addEventListener('keydown', (e) => {
+            game.keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+            if (e.key === ' ') {
+                activateShield();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            game.keys[e.key.toLowerCase()] = false;
+        });
         
         // Фразы игрока
         const PLAYER_PHRASES = [
@@ -395,98 +714,16 @@
             { name: 'Ультра Омега Супер Прапрапрадодос', color: '#ffd700', size: 35, targetTemp: Infinity }
         ];
         
-        // Сложность увеличивается с каждой формой
         const DIFFICULTY = [
-            { // Уровень 1 - Ч
-                enemies: 1,
-                attackSpeed: 2000,
-                projectileSpeed: 2,
-                projectilesPerAttack: 1,
-                damage: 3,
-                patterns: ['aimed'],
-                specialAttackChance: 0,
-                enemyMoveSpeed: 0.01
-            },
-            { // Уровень 2 - Батч
-                enemies: 1,
-                attackSpeed: 1600,
-                projectileSpeed: 2.5,
-                projectilesPerAttack: 2,
-                damage: 5,
-                patterns: ['aimed', 'spread3'],
-                specialAttackChance: 0.1,
-                enemyMoveSpeed: 0.015
-            },
-            { // Уровень 3 - Дод
-                enemies: 2,
-                attackSpeed: 1400,
-                projectileSpeed: 3,
-                projectilesPerAttack: 2,
-                damage: 7,
-                patterns: ['aimed', 'spread3', 'circle'],
-                specialAttackChance: 0.15,
-                enemyMoveSpeed: 0.02
-            },
-            { // Уровень 4 - Прадод
-                enemies: 2,
-                attackSpeed: 1200,
-                projectileSpeed: 3.5,
-                projectilesPerAttack: 3,
-                damage: 8,
-                patterns: ['aimed', 'spread5', 'circle', 'wave'],
-                specialAttackChance: 0.2,
-                enemyMoveSpeed: 0.025
-            },
-            { // Уровень 5 - Прапрадод
-                enemies: 3,
-                attackSpeed: 1000,
-                projectileSpeed: 4,
-                projectilesPerAttack: 3,
-                damage: 10,
-                patterns: ['spread5', 'circle', 'wave', 'spiral'],
-                specialAttackChance: 0.25,
-                enemyMoveSpeed: 0.03
-            },
-            { // Уровень 6 - Супер Прапрадод
-                enemies: 3,
-                attackSpeed: 800,
-                projectileSpeed: 4.5,
-                projectilesPerAttack: 4,
-                damage: 12,
-                patterns: ['spread5', 'circle', 'wave', 'spiral', 'cross'],
-                specialAttackChance: 0.3,
-                enemyMoveSpeed: 0.035
-            },
-            { // Уровень 7 - Додос
-                enemies: 4,
-                attackSpeed: 600,
-                projectileSpeed: 5,
-                projectilesPerAttack: 4,
-                damage: 15,
-                patterns: ['circle', 'wave', 'spiral', 'cross', 'burst'],
-                specialAttackChance: 0.35,
-                enemyMoveSpeed: 0.04
-            },
-            { // Уровень 8 - Ультрадодос
-                enemies: 4,
-                attackSpeed: 450,
-                projectileSpeed: 5.5,
-                projectilesPerAttack: 5,
-                damage: 18,
-                patterns: ['spiral', 'cross', 'burst', 'chaos'],
-                specialAttackChance: 0.4,
-                enemyMoveSpeed: 0.045
-            },
-            { // Уровень 9 - ФИНАЛ
-                enemies: 5,
-                attackSpeed: 300,
-                projectileSpeed: 6,
-                projectilesPerAttack: 6,
-                damage: 21,
-                patterns: ['chaos', 'apocalypse'],
-                specialAttackChance: 0.5,
-                enemyMoveSpeed: 0.05
-            }
+            { enemies: 1, attackSpeed: 2000, projectileSpeed: 2, projectilesPerAttack: 1, damage: 3, patterns: ['aimed'], specialAttackChance: 0, enemyMoveSpeed: 0.01 },
+            { enemies: 1, attackSpeed: 1600, projectileSpeed: 2.5, projectilesPerAttack: 2, damage: 5, patterns: ['aimed', 'spread3'], specialAttackChance: 0.1, enemyMoveSpeed: 0.015 },
+            { enemies: 2, attackSpeed: 1400, projectileSpeed: 3, projectilesPerAttack: 2, damage: 7, patterns: ['aimed', 'spread3', 'circle'], specialAttackChance: 0.15, enemyMoveSpeed: 0.02 },
+            { enemies: 2, attackSpeed: 1200, projectileSpeed: 3.5, projectilesPerAttack: 3, damage: 8, patterns: ['aimed', 'spread5', 'circle', 'wave'], specialAttackChance: 0.2, enemyMoveSpeed: 0.025 },
+            { enemies: 3, attackSpeed: 1000, projectileSpeed: 4, projectilesPerAttack: 3, damage: 10, patterns: ['spread5', 'circle', 'wave', 'spiral'], specialAttackChance: 0.25, enemyMoveSpeed: 0.03 },
+            { enemies: 3, attackSpeed: 800, projectileSpeed: 4.5, projectilesPerAttack: 4, damage: 12, patterns: ['spread5', 'circle', 'wave', 'spiral', 'cross'], specialAttackChance: 0.3, enemyMoveSpeed: 0.035 },
+            { enemies: 4, attackSpeed: 600, projectileSpeed: 5, projectilesPerAttack: 4, damage: 15, patterns: ['circle', 'wave', 'spiral', 'cross', 'burst'], specialAttackChance: 0.35, enemyMoveSpeed: 0.04 },
+            { enemies: 4, attackSpeed: 450, projectileSpeed: 5.5, projectilesPerAttack: 5, damage: 18, patterns: ['spiral', 'cross', 'burst', 'chaos'], specialAttackChance: 0.4, enemyMoveSpeed: 0.045 },
+            { enemies: 5, attackSpeed: 300, projectileSpeed: 6, projectilesPerAttack: 6, damage: 21, patterns: ['chaos', 'apocalypse'], specialAttackChance: 0.5, enemyMoveSpeed: 0.05 }
         ];
         
         const ENEMY_TYPES = [
@@ -512,20 +749,11 @@
             tempRate: 10,
             screenShake: 0,
             lastPlayerPhrase: 0,
-            lastEnemyPhrase: 0
+            lastEnemyPhrase: 0,
+            sessionCoins: 0,
+            shieldActive: 0,
+            shieldCooldown: 0
         };
-        
-        // Controls
-        document.addEventListener('keydown', (e) => {
-            game.keys[e.key.toLowerCase()] = true;
-            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
-                e.preventDefault();
-            }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            game.keys[e.key.toLowerCase()] = false;
-        });
         
         // Функция показа речевого пузыря
         function showSpeechBubble(x, y, text, isEnemy = false) {
@@ -534,11 +762,7 @@
             bubble.className = `speech-bubble ${isEnemy ? 'enemy' : ''}`;
             bubble.textContent = text;
             
-            // Позиционирование относительно canvas
             const canvasRect = canvas.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            // Scale for mobile
             const scaleX = canvas.width / canvasRect.width;
             const scaleY = canvas.height / canvasRect.height;
             
@@ -547,25 +771,48 @@
             
             container.appendChild(bubble);
             
-            // Удаляем через 2 секунды с анимацией
             setTimeout(() => {
                 bubble.style.animation = 'bubbleFade 0.5s ease-out forwards';
                 setTimeout(() => bubble.remove(), 500);
             }, 2000);
         }
         
-        // Фраза игрока
+        // Coin popup
+        function showCoinPopup(x, y, amount) {
+            const container = document.getElementById('coinContainer');
+            const popup = document.createElement('div');
+            popup.className = 'coin-popup';
+            popup.textContent = `+${amount} 💰`;
+            
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / canvasRect.width;
+            
+            popup.style.left = `${x / scaleX}px`;
+            popup.style.top = `${y / scaleX}px`;
+            
+            container.appendChild(popup);
+            
+            setTimeout(() => popup.remove(), 1000);
+        }
+        
         function playerSpeak() {
             if (!game.running) return;
             const phrase = PLAYER_PHRASES[Math.floor(Math.random() * PLAYER_PHRASES.length)];
             showSpeechBubble(game.player.x, game.player.y, phrase, false);
         }
         
-        // Фраза врага
         function enemySpeak(enemy) {
             if (!game.running) return;
             const phrase = ENEMY_PHRASES[Math.floor(Math.random() * ENEMY_PHRASES.length)];
             showSpeechBubble(enemy.x, enemy.y, phrase, true);
+        }
+        
+        function goToMenu() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('victoryScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+            updateShopUI();
         }
         
         function startGame() {
@@ -573,28 +820,35 @@
             document.getElementById('gameScreen').classList.remove('hidden');
             document.getElementById('gameScreen').classList.add('flex');
             
-            // Очищаем пузыри
             document.getElementById('speechContainer').innerHTML = '';
+            document.getElementById('coinContainer').innerHTML = '';
+            
+            const maxHP = getMaxHealth();
             
             game = {
                 running: true,
-                player: { x: 100, y: 250, vx: 0, vy: 0, health: 100, formIndex: 0, invincible: 0 },
+                player: { x: 100, y: 250, vx: 0, vy: 0, health: maxHP, maxHealth: maxHP, formIndex: 0, invincible: 0 },
                 temperature: 0,
                 enemies: [],
                 projectiles: [],
                 particles: [],
                 keys: {},
-                tempRate: 50, // УВЕЛИЧЕНО В 5 РАЗ (было 10)
+                tempRate: 50,
                 screenShake: 0,
                 lastPlayerPhrase: Date.now(),
-                lastEnemyPhrase: Date.now()
+                lastEnemyPhrase: Date.now(),
+                sessionCoins: 0,
+                shieldActive: 0,
+                shieldCooldown: 0
             };
+            
+            // Update shield button
+            document.getElementById('shieldBtn').classList.remove('on-cooldown');
             
             spawnEnemies();
             updateUI();
             gameLoop();
             
-            // Первая фраза игрока
             setTimeout(() => playerSpeak(), 1000);
         }
         
@@ -627,7 +881,23 @@
             document.getElementById('playerForm').textContent = form.name;
             document.getElementById('temperature').textContent = Math.floor(game.temperature).toLocaleString();
             document.getElementById('health').textContent = Math.max(0, Math.floor(game.player.health));
-            document.getElementById('level').textContent = game.player.formIndex + 1;
+            document.getElementById('coins').textContent = game.sessionCoins;
+            
+            // Shield status
+            const shieldStatus = document.getElementById('shieldStatus');
+            const shieldBtn = document.getElementById('shieldBtn');
+            if (game.shieldActive > 0) {
+                shieldStatus.textContent = `${Math.ceil(game.shieldActive / 60)}с`;
+                shieldStatus.className = 'text-green-300';
+            } else if (game.shieldCooldown > 0) {
+                shieldStatus.textContent = `${Math.ceil(game.shieldCooldown / 60)}с`;
+                shieldStatus.className = 'text-gray-500';
+                shieldBtn.classList.add('on-cooldown');
+            } else {
+                shieldStatus.textContent = 'Готов';
+                shieldStatus.className = 'text-cyan-300';
+                shieldBtn.classList.remove('on-cooldown');
+            }
             
             const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
             const diff = DIFFICULTY[game.player.formIndex];
@@ -637,7 +907,6 @@
             document.getElementById('tempBar').style.width = Math.min(100, progress) + '%';
             document.getElementById('nextForm').textContent = form.targetTemp === Infinity ? '∞' : form.targetTemp.toLocaleString() + '°C';
             
-            // Difficulty stars
             const stars = '★'.repeat(game.player.formIndex + 1) + '☆'.repeat(8 - game.player.formIndex);
             document.getElementById('difficultyInfo').textContent = `Сложность: ${stars}`;
         }
@@ -659,25 +928,21 @@
                 case 'aimed':
                     game.projectiles.push(createProjectile(enemy.x, enemy.y, angle, diff));
                     break;
-                    
                 case 'spread3':
                     for (let i = -1; i <= 1; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + i * 0.3, diff));
                     }
                     break;
-                    
                 case 'spread5':
                     for (let i = -2; i <= 2; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + i * 0.25, diff));
                     }
                     break;
-                    
                 case 'circle':
                     for (let i = 0; i < 8; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 8) * i, diff));
                     }
                     break;
-                    
                 case 'wave':
                     for (let i = 0; i < 5; i++) {
                         setTimeout(() => {
@@ -687,14 +952,12 @@
                         }, i * 100);
                     }
                     break;
-                    
                 case 'spiral':
                     enemy.angle = (enemy.angle || 0) + 0.5;
                     for (let i = 0; i < 3; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, enemy.angle + (Math.PI * 2 / 3) * i, diff));
                     }
                     break;
-                    
                 case 'cross':
                     for (let i = 0; i < 4; i++) {
                         const crossAngle = (Math.PI / 2) * i;
@@ -707,7 +970,6 @@
                         }
                     }
                     break;
-                    
                 case 'burst':
                     for (let i = 0; i < 12; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 12) * i, diff));
@@ -720,16 +982,13 @@
                         }
                     }, 200);
                     break;
-                    
                 case 'chaos':
                     for (let i = 0; i < 8; i++) {
                         const chaosAngle = Math.random() * Math.PI * 2;
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, chaosAngle, diff));
                     }
                     break;
-                    
                 case 'apocalypse':
-                    // Massive attack pattern
                     for (let i = 0; i < 16; i++) {
                         game.projectiles.push(createProjectile(enemy.x, enemy.y, (Math.PI * 2 / 16) * i, diff));
                     }
@@ -761,10 +1020,13 @@
             const form = FORMS[game.player.formIndex];
             const diff = DIFFICULTY[game.player.formIndex];
             
-            // Player movement - slightly faster to help with difficulty
+            // Shield timers
+            if (game.shieldActive > 0) game.shieldActive--;
+            if (game.shieldCooldown > 0) game.shieldCooldown--;
+            
+            // Player movement
             const speed = 5 + game.player.formIndex * 0.3;
             
-            // Keyboard controls
             let inputX = 0;
             let inputY = 0;
             
@@ -774,13 +1036,11 @@
             if (game.keys['a'] || game.keys['arrowleft']) inputX = -1;
             else if (game.keys['d'] || game.keys['arrowright']) inputX = 1;
             
-            // Joystick controls (override keyboard if active)
             if (joystick.active || Math.abs(joystick.moveX) > 0.1 || Math.abs(joystick.moveY) > 0.1) {
                 inputX = joystick.moveX;
                 inputY = joystick.moveY;
             }
             
-            // Apply movement
             if (Math.abs(inputX) > 0.1) {
                 game.player.vx = inputX * speed;
             } else {
@@ -796,14 +1056,20 @@
             game.player.x += game.player.vx;
             game.player.y += game.player.vy;
             
-            // Boundaries
             game.player.x = Math.max(form.size, Math.min(canvas.width - form.size - 150, game.player.x));
             game.player.y = Math.max(form.size, Math.min(canvas.height - form.size, game.player.y));
             
-            // Increase temperature (УВЕЛИЧЕНО В 5 РАЗ - теперь tempRate = 50 вместо 10)
-            game.temperature += (game.tempRate + game.player.formIndex * 25) / 60;
+            // Increase temperature with XP multiplier
+            const xpBonus = getXPMultiplier();
+            game.temperature += ((game.tempRate + game.player.formIndex * 25) / 60) * xpBonus;
             
-            // Периодические фразы игрока (каждые 3-6 секунд)
+            // Earn coins over time
+            if (Math.random() < 0.02 + game.player.formIndex * 0.01) {
+                const coinAmount = 1 + game.player.formIndex;
+                game.sessionCoins += coinAmount;
+                showCoinPopup(game.player.x + (Math.random() - 0.5) * 30, game.player.y - 20, coinAmount);
+            }
+            
             if (Date.now() - game.lastPlayerPhrase > 3000 + Math.random() * 3000) {
                 game.lastPlayerPhrase = Date.now();
                 playerSpeak();
@@ -813,14 +1079,17 @@
             if (game.temperature >= form.targetTemp) {
                 if (game.player.formIndex < FORMS.length - 1) {
                     game.player.formIndex++;
-                    game.player.invincible = 180; // Longer invincibility on transform
-                    game.player.health = Math.min(100, game.player.health + 30); // Heal on transform
-                    game.tempRate *= 1.8; // Ускорение роста температуры при трансформации
+                    game.player.invincible = 180;
+                    game.player.health = Math.min(game.player.maxHealth, game.player.health + 30);
+                    game.tempRate *= 1.8;
                     
-                    // Respawn enemies with new difficulty
+                    // Bonus coins for transformation
+                    const bonusCoins = 20 + game.player.formIndex * 15;
+                    game.sessionCoins += bonusCoins;
+                    showCoinPopup(game.player.x, game.player.y - 40, bonusCoins);
+                    
                     spawnEnemies();
                     
-                    // Transformation particles
                     for (let i = 0; i < 50; i++) {
                         game.particles.push({
                             x: game.player.x,
@@ -834,17 +1103,18 @@
                     
                     game.screenShake = 20;
                     
-                    // Фраза при трансформации
                     setTimeout(() => {
                         if (game.running) {
                             showSpeechBubble(game.player.x, game.player.y, "Я ЭВОЛЮЦИОНИРУЮ!", false);
                         }
                     }, 100);
                     
-                    // Check victory
                     if (game.player.formIndex === FORMS.length - 1) {
                         setTimeout(() => {
                             game.running = false;
+                            game.sessionCoins += 500; // Victory bonus
+                            saveData.coins += game.sessionCoins;
+                            saveSave();
                             document.getElementById('gameScreen').classList.add('hidden');
                             document.getElementById('victoryScreen').classList.remove('hidden');
                         }, 2000);
@@ -854,33 +1124,27 @@
             
             // Enemy behavior
             game.enemies.forEach((enemy, idx) => {
-                // Move enemy
                 if (Math.abs(enemy.y - enemy.targetY) < 10) {
                     enemy.targetY = 50 + Math.random() * (canvas.height - 100);
                 }
                 enemy.y += (enemy.targetY - enemy.y) * diff.enemyMoveSpeed;
                 
-                // Horizontal movement at higher levels
                 if (game.player.formIndex >= 4) {
                     enemy.x = canvas.width - 80 + Math.sin(Date.now() / 500 + idx) * 30;
                 }
                 
-                // Attack
                 if (Date.now() - enemy.lastAttack > diff.attackSpeed) {
                     enemy.lastAttack = Date.now();
                     
-                    // Choose attack pattern
                     const patterns = diff.patterns;
                     const pattern = patterns[Math.floor(Math.random() * patterns.length)];
                     createAttackPattern(enemy, pattern, diff);
                     
-                    // Фраза врага при атаке (с шансом 15%)
                     if (Math.random() < 0.15 && Date.now() - game.lastEnemyPhrase > 2000) {
                         game.lastEnemyPhrase = Date.now();
                         enemySpeak(enemy);
                     }
                     
-                    // Special attack chance
                     if (Math.random() < diff.specialAttackChance) {
                         setTimeout(() => {
                             if (game.running) {
@@ -897,8 +1161,8 @@
                 p.x += p.vx;
                 p.y += p.vy;
                 
-                // Check collision with player
-                if (game.player.invincible <= 0) {
+                // Check collision with player (ignore if shield active)
+                if (game.player.invincible <= 0 && game.shieldActive <= 0) {
                     const dx = p.x - game.player.x;
                     const dy = p.y - game.player.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -908,20 +1172,11 @@
                         game.player.invincible = 20;
                         game.screenShake = 10;
                         
-                        // Фраза при получении урона (с шансом 25%)
                         if (Math.random() < 0.25) {
-                            const hitPhrases = [
-                                "Ай, бл*ть!",
-                                "Сука!",
-                                "Больно!",
-                                "Ты бл*дь, д*лбаёб нах*й?",
-                                "П*здец!",
-                                "Нах*р!"
-                            ];
+                            const hitPhrases = ["Ай, бл*ть!", "Сука!", "Больно!", "П*здец!"];
                             showSpeechBubble(game.player.x, game.player.y, hitPhrases[Math.floor(Math.random() * hitPhrases.length)], false);
                         }
                         
-                        // Hit particles
                         for (let i = 0; i < 15; i++) {
                             game.particles.push({
                                 x: game.player.x,
@@ -935,6 +1190,26 @@
                         
                         if (game.player.health <= 0) {
                             gameOver();
+                        }
+                        return false;
+                    }
+                } else if (game.shieldActive > 0) {
+                    // Shield deflects projectiles
+                    const dx = p.x - game.player.x;
+                    const dy = p.y - game.player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < form.size + 20) {
+                        // Deflect particle effect
+                        for (let i = 0; i < 5; i++) {
+                            game.particles.push({
+                                x: p.x,
+                                y: p.y,
+                                vx: (Math.random() - 0.5) * 6,
+                                vy: (Math.random() - 0.5) * 6,
+                                life: 20,
+                                color: '#00bfff'
+                            });
                         }
                         return false;
                     }
@@ -953,13 +1228,11 @@
                 return p.life > 0;
             });
             
-            // Update invincibility and screen shake
             if (game.player.invincible > 0) game.player.invincible--;
             if (game.screenShake > 0) game.screenShake--;
         }
         
         function render() {
-            // Screen shake
             ctx.save();
             if (game.screenShake > 0) {
                 ctx.translate(
@@ -974,7 +1247,6 @@
             ctx.fillStyle = `rgb(${40 + (heat + formHeat) * 80}, ${20 - heat * 15}, ${20 - heat * 15})`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Danger zone indicator (right side where enemies are)
             ctx.fillStyle = `rgba(255, 0, 0, ${0.05 + formHeat * 0.1})`;
             ctx.fillRect(canvas.width - 200, 0, 200, canvas.height);
             
@@ -1004,7 +1276,6 @@
             
             // Draw projectiles
             game.projectiles.forEach(p => {
-                // Outer glow
                 ctx.shadowColor = '#ff4500';
                 ctx.shadowBlur = 10;
                 
@@ -1025,7 +1296,6 @@
             game.enemies.forEach((enemy, idx) => {
                 const pulseSize = Math.sin(Date.now() / 200 + idx) * 3;
                 
-                // Enemy glow
                 ctx.shadowColor = '#ff0000';
                 ctx.shadowBlur = 20 + game.player.formIndex * 3;
                 
@@ -1034,7 +1304,6 @@
                 ctx.arc(enemy.x, enemy.y, enemy.size + pulseSize, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Inner circle
                 ctx.fillStyle = `rgba(255, 100, 0, 0.5)`;
                 ctx.beginPath();
                 ctx.arc(enemy.x, enemy.y, enemy.size * 0.7, 0, Math.PI * 2);
@@ -1042,7 +1311,6 @@
                 
                 ctx.shadowBlur = 0;
                 
-                // Enemy emoji
                 ctx.font = `${18 + game.player.formIndex * 2}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -1053,11 +1321,27 @@
             const form = FORMS[game.player.formIndex];
             
             if (game.player.invincible <= 0 || Math.floor(game.player.invincible / 4) % 2 === 0) {
-                // Player glow
+                // Shield effect
+                if (game.shieldActive > 0) {
+                    ctx.shadowColor = '#00bfff';
+                    ctx.shadowBlur = 30;
+                    ctx.strokeStyle = '#00bfff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(game.player.x, game.player.y, form.size + 15 + Math.sin(Date.now() / 50) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Inner shield
+                    ctx.strokeStyle = 'rgba(0, 191, 255, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(game.player.x, game.player.y, form.size + 10, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
                 ctx.shadowColor = form.color;
                 ctx.shadowBlur = 20 + game.player.formIndex * 5;
                 
-                // Outer ring for higher forms
                 if (game.player.formIndex >= 3) {
                     ctx.strokeStyle = form.color;
                     ctx.lineWidth = 2;
@@ -1073,7 +1357,6 @@
                 
                 ctx.shadowBlur = 0;
                 
-                // Player name
                 ctx.fillStyle = '#000';
                 ctx.font = `bold ${Math.min(form.size - 4, 12)}px Arial`;
                 ctx.textAlign = 'center';
@@ -1086,22 +1369,43 @@
             // Health bar
             ctx.fillStyle = '#333';
             ctx.fillRect(10, 10, 150, 15);
-            const healthColor = game.player.health > 50 ? '#00ff00' : game.player.health > 25 ? '#ffff00' : '#ff0000';
+            const healthColor = game.player.health > game.player.maxHealth * 0.5 ? '#00ff00' : game.player.health > game.player.maxHealth * 0.25 ? '#ffff00' : '#ff0000';
             ctx.fillStyle = healthColor;
-            ctx.fillRect(10, 10, Math.max(0, game.player.health * 1.5), 15);
+            ctx.fillRect(10, 10, Math.max(0, (game.player.health / game.player.maxHealth) * 150), 15);
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             ctx.strokeRect(10, 10, 150, 15);
             
-            // Temperature display
+            // HP text
             ctx.fillStyle = '#fff';
-            ctx.font = '10px "Press Start 2P"';
+            ctx.font = '8px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${Math.floor(game.player.health)}/${game.player.maxHealth}`, 85, 18);
+            
+            // Temperature display
             ctx.textAlign = 'left';
+            ctx.font = '10px "Press Start 2P"';
             ctx.fillText(`🌡️ ${Math.floor(game.temperature).toLocaleString()}°C`, 10, 42);
             
             // Level/Form indicator
             ctx.fillStyle = form.color;
             ctx.fillText(`${form.name}`, 10, 58);
+            
+            // Coins display
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText(`💰 ${game.sessionCoins}`, 10, 74);
+            
+            // Shield cooldown indicator
+            if (game.shieldCooldown > 0 && game.shieldActive <= 0) {
+                ctx.fillStyle = '#888';
+                ctx.fillText(`🛡️ ${Math.ceil(game.shieldCooldown / 60)}с`, canvas.width - 100, 20);
+            } else if (game.shieldActive > 0) {
+                ctx.fillStyle = '#00bfff';
+                ctx.fillText(`🛡️ ${Math.ceil(game.shieldActive / 60)}с`, canvas.width - 100, 20);
+            } else {
+                ctx.fillStyle = '#00ff00';
+                ctx.fillText(`🛡️ ГОТОВ`, canvas.width - 100, 20);
+            }
             
             ctx.restore();
         }
@@ -1109,14 +1413,18 @@
         function gameOver() {
             game.running = false;
             
-            // Финальная фраза
             showSpeechBubble(game.player.x, game.player.y, "Я СГОРЕЛ!!!", false);
+            
+            // Save coins
+            saveData.coins += game.sessionCoins;
+            saveSave();
             
             setTimeout(() => {
                 document.getElementById('gameScreen').classList.add('hidden');
                 document.getElementById('gameOverScreen').classList.remove('hidden');
                 document.getElementById('finalForm').textContent = FORMS[game.player.formIndex].name;
                 document.getElementById('finalTemp').textContent = Math.floor(game.temperature).toLocaleString();
+                document.getElementById('earnedCoins').textContent = game.sessionCoins;
                 document.getElementById('finalLevel').textContent = `${game.player.formIndex + 1}/9`;
             }, 500);
         }
@@ -1138,7 +1446,9 @@
         
         setInterval(createSteam, 300);
         
-        // Prevent default touch behavior on game area
+        // Load save on start
+        loadSave();
+        
         document.body.addEventListener('touchstart', (e) => {
             if (e.target.tagName !== 'BUTTON') {
                 // Don't prevent default for buttons
