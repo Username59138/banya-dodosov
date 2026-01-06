@@ -10,9 +10,9 @@
 ## 📜 About / О проекте
 
 This is a funny web-game using viral TikTok memes (Mellstroy, Сыр, Ч, Дод, etc.).
-Survive the rising temperature, dodge enemies, and evolve through **9 different forms**!
+Survive the rising temperature, dodge enemies
 
-Это рофл-проект, но с серьезной механикой. Тебе предстоит выжить в адской парилке, уворачиваясь от врагов и повышая температуру. Эволюционируй от обычного Сыра до легендарного Ультра-Додоса!
+Это рофл-проект, но с серьезной механикой. Тебе предстоит выжить в адской парилке, уворачиваясь от врагов и повышая температуру.
 
 ## 🕹️ Controls / Управление
 
@@ -23,7 +23,6 @@ Survive the rising temperature, dodge enemies, and evolve through **9 different 
 
 ## ✨ Features
 
-*   🔥 **9 Evolution Forms:** Start as "Сыр" (Cheese) and reach "Ultra Omega Super Dodos".
 *   📱 **Mobile Support:** Fully playable on phones with a custom virtual joystick.
 *   🌪️ **Bullet Hell:** Advanced enemy AI with different attack patterns (Spiral, Wave, Chaos).
 *   🎨 **Visuals:** Particle effects, screen shake, and heat distortion simulations using HTML5 Canvas.
