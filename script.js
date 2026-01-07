@@ -1,18 +1,103 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Save System
+// ============ ЗАГРУЗКА РЕСУРСОВ ============
+
+// Загрузка изображений
+const IMAGES = {};
+const IMAGE_SOURCES = {
+    sir: 'images/sir.jpg',
+    ch: 'images/ch.jpg',
+    batch: 'images/batch.jpg',
+    dod: 'images/dod.jpg',
+    pradod: 'images/pradod.jpg',
+    prapradod: 'images/prapradod.jpg',
+    omegaSuper: 'images/omage-super-pradodos.jpg'
+};
+
+let imagesLoaded = 0;
+const totalImages = Object.keys(IMAGE_SOURCES).length;
+
+function loadImages() {
+    for (const [key, src] of Object.entries(IMAGE_SOURCES)) {
+        const img = new Image();
+        img.onload = () => {
+            imagesLoaded++;
+            console.log(`Загружено изображение: ${key} (${imagesLoaded}/${totalImages})`);
+        };
+        img.onerror = () => {
+            console.warn(`Ошибка загрузки изображения: ${src}`);
+        };
+        img.src = src;
+        IMAGES[key] = img;
+    }
+}
+
+// Загрузка звуков
+const SOUNDS = {
+    echePositim: null,
+    tiblyaDolbaeb: null,
+    yaYcheKrasniy: null
+};
+
+function loadSounds() {
+    try {
+        SOUNDS.echePositim = new Audio('sounds/eche-posidim.mp3');
+        SOUNDS.tiblyaDolbaeb = new Audio('sounds/ti-blya-dolbaeb.mp3');
+        SOUNDS.yaYcheKrasniy = new Audio('sounds/ya-yche-krasniy.mp3');
+        
+        // Предзагрузка звуков
+        Object.values(SOUNDS).forEach(sound => {
+            if (sound) {
+                sound.load();
+                sound.volume = 0.6;
+            }
+        });
+        
+        console.log('Звуки загружены');
+    } catch (e) {
+        console.warn('Ошибка загрузки звуков:', e);
+    }
+}
+
+// Привязка звуков к фразам
+function getSoundForPhrase(text) {
+    if (text.includes("Ещё посидим")) return SOUNDS.echePositim;
+    if (text.includes("д*лбаёб") || text.includes("долбаёб")) return SOUNDS.tiblyaDolbaeb;
+    if (text.includes("красный")) return SOUNDS.yaYcheKrasniy;
+    return null;
+}
+
+// Функция воспроизведения звука
+function playSound(sound) {
+    if (!sound) return;
+    try {
+        const audioClone = sound.cloneNode();
+        audioClone.volume = 0.6;
+        audioClone.play().catch(e => {
+            // Тихо игнорируем ошибки автовоспроизведения
+        });
+    } catch (e) {
+        console.warn('Ошибка воспроизведения звука:', e);
+    }
+}
+
+// Инициализация ресурсов
+loadImages();
+loadSounds();
+
+// ============ СИСТЕМА СОХРАНЕНИЙ ============
+
 let saveData = {
     coins: 0,
     upgrades: {
-        hp: 0,      // Max 5 (+20 HP each)
-        xp: 0,      // Max 5 (+25% temp rate each)
-        shield: 0,  // Max 5 (+1 sec each)
-        cooldown: 0 // Max 5 (-2 sec each)
+        hp: 0,
+        xp: 0,
+        shield: 0,
+        cooldown: 0
     }
 };
 
-// Load save data
 function loadSave() {
     const saved = localStorage.getItem('banyaDodsave');
     if (saved) {
@@ -29,7 +114,8 @@ function saveSave() {
     localStorage.setItem('banyaDodsave', JSON.stringify(saveData));
 }
 
-// Shop Functions
+// ============ МАГАЗИН ============
+
 const UPGRADE_COSTS = {
     hp: [1000, 2000, 4000, 8000, 15000],
     xp: [1500, 3000, 6000, 12000, 20000],
@@ -50,25 +136,21 @@ function updateShopUI() {
     document.getElementById('startCoins').textContent = saveData.coins;
     document.getElementById('shopCoins').textContent = saveData.coins;
     
-    // HP
     const hpLevel = saveData.upgrades.hp;
     document.getElementById('hpLevel').textContent = hpLevel;
     document.getElementById('hpCost').textContent = hpLevel >= 5 ? 'MAX' : UPGRADE_COSTS.hp[hpLevel];
     document.getElementById('shopHP').classList.toggle('maxed', hpLevel >= 5);
     
-    // XP
     const xpLevel = saveData.upgrades.xp;
     document.getElementById('xpLevel').textContent = xpLevel;
     document.getElementById('xpCost').textContent = xpLevel >= 5 ? 'MAX' : UPGRADE_COSTS.xp[xpLevel];
     document.getElementById('shopXP').classList.toggle('maxed', xpLevel >= 5);
     
-    // Shield
     const shieldLevel = saveData.upgrades.shield;
     document.getElementById('shieldLevel').textContent = shieldLevel;
     document.getElementById('shieldCost').textContent = shieldLevel >= 5 ? 'MAX' : UPGRADE_COSTS.shield[shieldLevel];
     document.getElementById('shopShield').classList.toggle('maxed', shieldLevel >= 5);
     
-    // Cooldown
     const cooldownLevel = saveData.upgrades.cooldown;
     document.getElementById('cooldownLevel').textContent = cooldownLevel;
     document.getElementById('cooldownCost').textContent = cooldownLevel >= 5 ? 'MAX' : UPGRADE_COSTS.cooldown[cooldownLevel];
@@ -86,7 +168,6 @@ function buyUpgrade(type) {
         saveSave();
         updateShopUI();
         
-        // Visual feedback
         const elementIds = {
             hp: 'shopHP',
             xp: 'shopXP',
@@ -118,7 +199,8 @@ function getShieldCooldown() {
     return 15 - saveData.upgrades.cooldown * 2;
 }
 
-// Joystick variables
+// ============ ДЖОЙСТИК ============
+
 const joystickContainer = document.getElementById('joystickContainer');
 const joystickHandle = document.getElementById('joystickHandle');
 const joystickBase = document.getElementById('joystickBase');
@@ -134,7 +216,6 @@ let joystick = {
 
 const joystickMaxDistance = 45;
 
-// Fullscreen toggle
 function toggleFullscreen() {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {
@@ -145,7 +226,6 @@ function toggleFullscreen() {
     }
 }
 
-// Joystick touch events
 joystickContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
@@ -213,7 +293,8 @@ function resetJoystick() {
     joystickHandle.style.transform = 'translate(-50%, -50%)';
 }
 
-// Shield activation
+// ============ ЩИТ ============
+
 function activateShield() {
     if (!game.running || game.paused) return;
     if (game.shieldCooldown > 0) return;
@@ -227,7 +308,8 @@ function activateShield() {
     showSpeechBubble(game.player.x, game.player.y, "ЩИТ АКТИВИРОВАН!", false);
 }
 
-// Keyboard shield activation
+// ============ УПРАВЛЕНИЕ ============
+
 document.addEventListener('keydown', (e) => {
     game.keys[e.key.toLowerCase()] = true;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
@@ -247,7 +329,8 @@ document.addEventListener('keyup', (e) => {
     game.keys[e.key.toLowerCase()] = false;
 });
 
-// Pause functions
+// ============ ПАУЗА ============
+
 function togglePause() {
     if (!game.running && !game.paused) return;
     
@@ -305,32 +388,40 @@ function quitToMenu() {
     goToMenu();
 }
 
-// Фразы игрока
+// ============ ФРАЗЫ ============
+
+// Фразы игрока (со звуками и без)
 const PLAYER_PHRASES = [
-    "Я уже красный!",
-    "Ещё посидим, нормально",
-    "Нормально, терпимо!"
+    { text: "Я уже красный!", hasSound: true },
+    { text: "Ещё посидим, нормально", hasSound: true },
+    { text: "Нормально, терпимо!", hasSound: false },
+    { text: "Жарковато...", hasSound: false },
+    { text: "Кайф!", hasSound: false }
 ];
 
-// Фразы врагов
+// Фразы врагов (со звуками и без)
 const ENEMY_PHRASES = [
-    "Ты бл*дь, д*лбаёб нах*й?",
-    "Я уже синий!",
-    "Повысь температуру!",
-    "Омайгад"
+    { text: "Ты бл*дь, д*лбаёб нах*й?", hasSound: true },
+    { text: "Я уже синий!", hasSound: false },
+    { text: "Повысь температуру!", hasSound: false },
+    { text: "Омайгад", hasSound: false },
+    { text: "Мало пара!", hasSound: false },
+    { text: "Ещё жару!", hasSound: false }
 ];
+
+// ============ ФОРМЫ С КАРТИНКАМИ ============
 
 const FORMS = [
-    { name: 'Сыр', color: '#ffff00', size: 12, targetTemp: 1000 },
-    { name: 'Ч', color: '#ffffff', size: 18, targetTemp: 5000 },
-    { name: 'Батч', color: '#ffffaa', size: 20, targetTemp: 10000 },
-    { name: 'Дод', color: '#ffa500', size: 22, targetTemp: 50000 },
-    { name: 'Прадод', color: '#ff6b35', size: 24, targetTemp: 150000 },
-    { name: 'Прапрадод', color: '#ff4500', size: 26, targetTemp: 400000 },
-    { name: 'Супер Прапрадод', color: '#ff0000', size: 28, targetTemp: 800000 },
-    { name: 'Додос', color: '#ff00ff', size: 30, targetTemp: 1500000 },
-    { name: 'Ультрадодос', color: '#00ffff', size: 32, targetTemp: 3000000 },
-    { name: 'Ультра Омега Супер Прапрапрадодос', color: '#ffd700', size: 35, targetTemp: Infinity }
+    { name: 'Сыр', color: '#ffff00', size: 12, targetTemp: 1000, image: 'sir' },
+    { name: 'Ч', color: '#ffffff', size: 18, targetTemp: 5000, image: 'ch' },
+    { name: 'Батч', color: '#ffffaa', size: 20, targetTemp: 10000, image: 'batch' },
+    { name: 'Дод', color: '#ffa500', size: 22, targetTemp: 50000, image: 'dod' },
+    { name: 'Прадод', color: '#ff6b35', size: 24, targetTemp: 150000, image: 'pradod' },
+    { name: 'Прапрадод', color: '#ff4500', size: 26, targetTemp: 400000, image: 'prapradod' },
+    { name: 'Супер Прапрадод', color: '#ff0000', size: 28, targetTemp: 800000, image: 'omegaSuper' },
+    { name: 'Додос', color: '#ff00ff', size: 30, targetTemp: 1500000, image: 'omegaSuper' },
+    { name: 'Ультрадодос', color: '#00ffff', size: 32, targetTemp: 3000000, image: 'omegaSuper' },
+    { name: 'Ультра Омега Супер Прапрапрадодос', color: '#ffd700', size: 35, targetTemp: Infinity, image: 'omegaSuper' }
 ];
 
 const DIFFICULTY = [
@@ -357,10 +448,9 @@ const ENEMY_TYPES = [
     { name: 'БОГ ПАРА', emoji: '☠️👑', color: '#220000' }
 ];
 
-// FIX #1: Added 'paused: false' to initial game object
 let game = {
     running: false,
-    paused: false,  // ✅ FIXED: Added missing property
+    paused: false,
     player: null,
     temperature: 0,
     enemies: [],
@@ -378,7 +468,8 @@ let game = {
     pauseTime: 0
 };
 
-// Функция показа речевого пузыря
+// ============ РЕЧЕВЫЕ ПУЗЫРИ СО ЗВУКОМ ============
+
 function showSpeechBubble(x, y, text, isEnemy = false) {
     const container = document.getElementById('speechContainer');
     const bubble = document.createElement('div');
@@ -394,13 +485,18 @@ function showSpeechBubble(x, y, text, isEnemy = false) {
     
     container.appendChild(bubble);
     
+    // Воспроизведение звука для фразы
+    const sound = getSoundForPhrase(text);
+    if (sound) {
+        playSound(sound);
+    }
+    
     setTimeout(() => {
         bubble.style.animation = 'bubbleFade 0.5s ease-out forwards';
         setTimeout(() => bubble.remove(), 500);
     }, 2000);
 }
 
-// Coin popup
 function showCoinPopup(x, y, amount) {
     const container = document.getElementById('coinContainer');
     const popup = document.createElement('div');
@@ -420,14 +516,14 @@ function showCoinPopup(x, y, amount) {
 
 function playerSpeak() {
     if (!game.running || game.paused) return;
-    const phrase = PLAYER_PHRASES[Math.floor(Math.random() * PLAYER_PHRASES.length)];
-    showSpeechBubble(game.player.x, game.player.y, phrase, false);
+    const phraseObj = PLAYER_PHRASES[Math.floor(Math.random() * PLAYER_PHRASES.length)];
+    showSpeechBubble(game.player.x, game.player.y, phraseObj.text, false);
 }
 
 function enemySpeak(enemy) {
     if (!game.running || game.paused) return;
-    const phrase = ENEMY_PHRASES[Math.floor(Math.random() * ENEMY_PHRASES.length)];
-    showSpeechBubble(enemy.x, enemy.y, phrase, true);
+    const phraseObj = ENEMY_PHRASES[Math.floor(Math.random() * ENEMY_PHRASES.length)];
+    showSpeechBubble(enemy.x, enemy.y, phraseObj.text, true);
 }
 
 function goToMenu() {
@@ -450,10 +546,9 @@ function startGame() {
     
     const maxHP = getMaxHealth();
     
-    // FIX #2: Added 'paused: false' to game object reassignment
     game = {
         running: true,
-        paused: false,  // ✅ FIXED: Added missing property
+        paused: false,
         player: { x: 100, y: 250, vx: 0, vy: 0, health: maxHP, maxHealth: maxHP, formIndex: 0, invincible: 0 },
         temperature: 0,
         enemies: [],
@@ -526,8 +621,6 @@ function updateUI() {
         shieldBtn.classList.remove('on-cooldown');
     }
     
-    // FIX #4: Removed unused variables (diffIndex, enemyType, diff)
-    
     const progress = (game.temperature / form.targetTemp) * 100;
     document.getElementById('tempBar').style.width = Math.min(100, progress) + '%';
     document.getElementById('nextForm').textContent = form.targetTemp === Infinity ? '∞' : form.targetTemp.toLocaleString() + '°C';
@@ -537,7 +630,6 @@ function updateUI() {
     const emptyStars = Math.max(0, maxStars - filledStars);
     const stars = '★'.repeat(filledStars) + '☆'.repeat(emptyStars);
     
-    // FIX #3: Removed duplicate line
     document.getElementById('difficultyInfo').textContent = `Сложность: ${stars}`;
 }
 
@@ -854,6 +946,8 @@ function update() {
     if (game.screenShake > 0) game.screenShake--;
 }
 
+// ============ РЕНДЕРИНГ С КАРТИНКАМИ ============
+
 function render() {
     ctx.save();
     if (game.screenShake > 0) {
@@ -937,6 +1031,7 @@ function render() {
     const form = FORMS[game.player.formIndex];
     
     if (game.player.invincible <= 0 || Math.floor(game.player.invincible / 4) % 2 === 0) {
+        // Эффект щита
         if (game.shieldActive > 0) {
             ctx.shadowColor = '#00bfff';
             ctx.shadowBlur = 30;
@@ -956,6 +1051,7 @@ function render() {
         ctx.shadowColor = form.color;
         ctx.shadowBlur = 20 + game.player.formIndex * 5;
         
+        // Аура для высоких форм
         if (game.player.formIndex >= 3) {
             ctx.strokeStyle = form.color;
             ctx.lineWidth = 2;
@@ -964,22 +1060,54 @@ function render() {
             ctx.stroke();
         }
         
-        ctx.fillStyle = form.color;
-        ctx.beginPath();
-        ctx.arc(game.player.x, game.player.y, form.size, 0, Math.PI * 2);
-        ctx.fill();
+        // ============ ОТРИСОВКА ПЕРСОНАЖА С КАРТИНКОЙ ============
+        const playerImage = IMAGES[form.image];
+        
+        if (playerImage && playerImage.complete && playerImage.naturalWidth > 0) {
+            // Рисуем картинку
+            const imgSize = form.size * 3; // Размер картинки
+            
+            // Круглая маска для картинки
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(game.player.x, game.player.y, form.size + 5, 0, Math.PI * 2);
+            ctx.clip();
+            
+            ctx.drawImage(
+                playerImage,
+                game.player.x - imgSize / 2,
+                game.player.y - imgSize / 2,
+                imgSize,
+                imgSize
+            );
+            ctx.restore();
+            
+            // Обводка вокруг картинки
+            ctx.strokeStyle = form.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(game.player.x, game.player.y, form.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            // Fallback - рисуем круг если картинка не загружена
+            ctx.fillStyle = form.color;
+            ctx.beginPath();
+            ctx.arc(game.player.x, game.player.y, form.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = `bold ${Math.min(form.size - 4, 12)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const displayName = form.name.length > 8 ? form.name.substring(0, 7) + '..' : form.name;
+            ctx.fillText(displayName, game.player.x, game.player.y);
+        }
         
         ctx.shadowBlur = 0;
-        
-        ctx.fillStyle = '#000';
-        ctx.font = `bold ${Math.min(form.size - 4, 12)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        const displayName = form.name.length > 8 ? form.name.substring(0, 7) + '..' : form.name;
-        ctx.fillText(displayName, game.player.x, game.player.y);
     }
     
+    // Полоса здоровья
     ctx.fillStyle = '#333';
     ctx.fillRect(10, 10, 150, 15);
     const healthColor = game.player.health > game.player.maxHealth * 0.5 ? '#00ff00' : game.player.health > game.player.maxHealth * 0.25 ? '#ffff00' : '#ff0000';
