@@ -576,7 +576,7 @@ function spawnEnemies() {
     game.enemies = [];
     const diff = DIFFICULTY[Math.min(game.player.formIndex, DIFFICULTY.length - 1)];
     const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
-
+    document.getElementById('enemyInfo').textContent = "Текущий враг: " + enemyType.name;
     for (let i = 0; i < diff.enemies; i++) {
         game.enemies.push({
             x: canvas.width - 80,
