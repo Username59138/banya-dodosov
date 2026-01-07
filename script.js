@@ -37,7 +37,8 @@ function loadImages() {
 const SOUNDS = {
     echePositim: null,
     tiblyaDolbaeb: null,
-    yaYcheKrasniy: null
+    yaYcheKrasniy: null,
+    ohmygod: null
 };
 
 function loadSounds() {
@@ -45,6 +46,7 @@ function loadSounds() {
         SOUNDS.echePositim = new Audio('sounds/eche-posidim.mp3');
         SOUNDS.tiblyaDolbaeb = new Audio('sounds/ti-blya-dolbaeb.mp3');
         SOUNDS.yaYcheKrasniy = new Audio('sounds/ya-yche-krasniy.mp3');
+        SOUNDS.ohmygod = new Audio('sounds/ohmygod.mp3');
         
         // Предзагрузка звуков
         Object.values(SOUNDS).forEach(sound => {
@@ -62,9 +64,10 @@ function loadSounds() {
 
 // Привязка звуков к фразам
 function getSoundForPhrase(text) {
-    if (text.includes("Ещё посидим")) return SOUNDS.echePositim;
+    if (text.includes("Ещё посидим") || text.includes("терпимо")) return SOUNDS.echePositim;
     if (text.includes("д*лбаёб") || text.includes("долбаёб")) return SOUNDS.tiblyaDolbaeb;
     if (text.includes("красный")) return SOUNDS.yaYcheKrasniy;
+    if (text.includes("Омайгад")) return SOUNDS.ohmygod
     return null;
 }
 
@@ -394,19 +397,14 @@ function quitToMenu() {
 const PLAYER_PHRASES = [
     { text: "Я уже красный!", hasSound: true },
     { text: "Ещё посидим, нормально", hasSound: true },
-    { text: "Нормально, терпимо!", hasSound: false },
-    { text: "Жарковато...", hasSound: false },
-    { text: "Кайф!", hasSound: false }
+    { text: "Нормально, терпимо!", hasSound: true },
 ];
 
 // Фразы врагов (со звуками и без)
 const ENEMY_PHRASES = [
     { text: "Ты бл*дь, д*лбаёб нах*й?", hasSound: true },
     { text: "Я уже синий!", hasSound: false },
-    { text: "Повысь температуру!", hasSound: false },
-    { text: "Омайгад", hasSound: false },
-    { text: "Мало пара!", hasSound: false },
-    { text: "Ещё жару!", hasSound: false }
+    { text: "Омайгад", hasSound: true },
 ];
 
 // ============ ФОРМЫ С КАРТИНКАМИ ============
