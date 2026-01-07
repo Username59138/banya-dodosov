@@ -97,7 +97,8 @@ let saveData = {
         hp: 0,
         xp: 0,
         shield: 0,
-        cooldown: 0
+        cooldown: 0,
+        heal: 0
     }
 };
 
@@ -123,7 +124,8 @@ const UPGRADE_COSTS = {
     hp: [1000, 2000, 4000, 8000, 15000],
     xp: [1500, 3000, 6000, 12000, 20000],
     shield: [2000, 4000, 8000, 16000, 30000],
-    cooldown: [1750, 3500, 7000, 14000, 25000]
+    cooldown: [1750, 3500, 7000, 14000, 25000],
+    heal: [2500, 4000, 8000, 16000, 30000]
 };
 
 function openShop() {
@@ -158,6 +160,11 @@ function updateShopUI() {
     document.getElementById('cooldownLevel').textContent = cooldownLevel;
     document.getElementById('cooldownCost').textContent = cooldownLevel >= 5 ? 'MAX' : UPGRADE_COSTS.cooldown[cooldownLevel];
     document.getElementById('shopCooldown').classList.toggle('maxed', cooldownLevel >= 5);
+        
+    const healLevel = saveData.upgrades.heal;
+    document.getElementById('healLevel').textContent = healLevel;
+    document.getElementById('healCost').textContent = healLevel >= 5 ? 'MAX' : UPGRADE_COSTS.heal[healLevel];
+    document.getElementById('shopHeal').classList.toggle('maxed', healLevel >= 5);
 }
 
 function buyUpgrade(type) {
@@ -175,7 +182,8 @@ function buyUpgrade(type) {
             hp: 'shopHP',
             xp: 'shopXP',
             shield: 'shopShield',
-            cooldown: 'shopCooldown'
+            cooldown: 'shopCooldown',
+            heal: 'shopHeal'
         };
         
         const element = document.getElementById(elementIds[type]);
@@ -200,6 +208,11 @@ function getShieldDuration() {
 
 function getShieldCooldown() {
     return 15 - saveData.upgrades.cooldown * 2;
+}
+
+
+function getShieldHeal() {
+    return 5 + saveData.upgrades.heal * 5;
 }
 
 // ============ ДЖОЙСТИК ============
@@ -296,15 +309,17 @@ function resetJoystick() {
     joystickHandle.style.transform = 'translate(-50%, -50%)';
 }
 
-// ============ ЩИТ ============
+// ============ ЩИТ (ВОСТАНАВЛИВАЕТ ЗДОРОВЬЕ) ============
 
 function activateShield() {
     if (!game.running || game.paused) return;
     if (game.shieldCooldown > 0) return;
-    
+    const heal_procent = getShieldHeal();
+
     game.shieldActive = getShieldDuration() * 60;
     game.shieldCooldown = getShieldCooldown() * 60;
-    
+    game.player.health = Math.min(game.player.maxHealth, game.player.health + (game.player.maxHealth / 100) * heal_procent);
+
     const btn = document.getElementById('shieldBtn');
     btn.classList.add('on-cooldown');
     
@@ -400,9 +415,9 @@ const PLAYER_PHRASES = [
     { text: "Нормально, терпимо!", hasSound: true },
 ];
 
-// Фразы врагов (со звуками и без)
+// Фразы врагов (со звуками)
 const ENEMY_PHRASES = [
-    { text: "Ты бл*дь, д*лбаёб нах*й?", hasSound: true },
+    { text: "Ты блядь, долбаёб нахай?", hasSound: true },
     { text: "Омайгад", hasSound: true },
 ];
 
@@ -436,10 +451,10 @@ const DIFFICULTY = [
 const ENEMY_TYPES = [
     { name: 'Дод', image: 'dod', color: '#8b4513' },
     { name: 'Прадод', image: 'pradod', color: '#654321' },
-    { name: 'Прапрадод', image: 'prapradod', color: '#4a3520' },
-    { name: 'Супер Прапрадод', image: 'omegaSuper', color: '#3d2914' },
-    { name: 'Додос', image: 'dod', color: '#2d1f0f' },
-    { name: 'Ультрадодос', image: 'pradod', color: '#1a1209' },
+    { name: 'Прапрадод', image: 'pradod', color: '#4a3520' },
+    { name: 'Супер Прапрадод', image: 'prapradod', color: '#3d2914' },
+    { name: 'Додос', image: 'prapradod', color: '#2d1f0f' },
+    { name: 'Ультрадодос', image: 'prapradod', color: '#1a1209' },
     { name: 'Ультра Омега', image: 'prapradod', color: '#0a0604' },
     { name: 'БОСС БАНИ', image: 'omegaSuper', color: '#000000' },
     { name: 'БОГ ПАРА', image: 'omegaSuper', color: '#220000' }
