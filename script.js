@@ -86,10 +86,19 @@
                 saveSave();
                 updateShopUI();
                 
-                // Visual feedback
-                const element = document.getElementById('shop' + type.charAt(0).toUpperCase() + type.slice(1));
-                element.style.transform = 'scale(1.1)';
-                setTimeout(() => element.style.transform = '', 200);
+                // Visual feedback - используем маппинг для правильных ID
+                const elementIds = {
+                    hp: 'shopHP',
+                    xp: 'shopXP',
+                    shield: 'shopShield',
+                    cooldown: 'shopCooldown'
+                };
+                
+                const element = document.getElementById(elementIds[type]);
+                if (element) {
+                    element.style.transform = 'scale(1.1)';
+                    setTimeout(() => element.style.transform = '', 200);
+                }
             }
         }
         
@@ -408,12 +417,12 @@
             
             const canvasRect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / canvasRect.width;
+            const scaleY = canvas.height / canvasRect.height;  // ✅ Add this
             
             popup.style.left = `${x / scaleX}px`;
-            popup.style.top = `${y / scaleX}px`;
+            popup.style.top = `${y / scaleY}px`;  // ✅ Use scaleY
             
             container.appendChild(popup);
-            
             setTimeout(() => popup.remove(), 1000);
         }
         
@@ -480,9 +489,10 @@
         
         function spawnEnemies() {
             game.enemies = [];
-            const diff = DIFFICULTY[game.player.formIndex];
+            const diff = DIFFICULTY[Math.min(game.player.formIndex, DIFFICULTY.length - 1)];
             const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
-            
+
+
             for (let i = 0; i < diff.enemies; i++) {
                 game.enemies.push({
                     x: canvas.width - 80,
@@ -525,10 +535,10 @@
                 shieldBtn.classList.remove('on-cooldown');
             }
             
+            const diffIndex = Math.min(game.player.formIndex, DIFFICULTY.length - 1);
             const enemyType = ENEMY_TYPES[Math.min(game.player.formIndex, ENEMY_TYPES.length - 1)];
-            const diff = DIFFICULTY[game.player.formIndex];
-            document.getElementById('enemyInfo').textContent = `Враги: ${diff.enemies}x ${enemyType.emoji} ${enemyType.name}`;
-            
+            const diff = DIFFICULTY[diffIndex];
+
             const progress = (game.temperature / form.targetTemp) * 100;
             document.getElementById('tempBar').style.width = Math.min(100, progress) + '%';
             document.getElementById('nextForm').textContent = form.targetTemp === Infinity ? '∞' : form.targetTemp.toLocaleString() + '°C';
@@ -572,7 +582,7 @@
                 case 'wave':
                     for (let i = 0; i < 5; i++) {
                         setTimeout(() => {
-                            if (game.running) {
+                            if (game.running && !game.paused) { 
                                 game.projectiles.push(createProjectile(enemy.x, enemy.y, angle + Math.sin(Date.now() / 100) * 0.5, diff));
                             }
                         }, i * 100);
@@ -644,8 +654,7 @@
         
         function update() {
             const form = FORMS[game.player.formIndex];
-            const diff = DIFFICULTY[game.player.formIndex];
-            
+            const diff = DIFFICULTY[Math.min(game.player.formIndex, DIFFICULTY.length - 1)];
             // Shield timers
             if (game.shieldActive > 0) game.shieldActive--;
             if (game.shieldCooldown > 0) game.shieldCooldown--;
@@ -794,7 +803,11 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     
                     if (dist < form.size + p.size) {
-                        game.player.health -= p.damage;
+                        if (game.player.health - p.damage >= 0) {
+                            game.player.health -= p.damage;
+                        } else {
+                            game.player.health = 0;
+                        }
                         game.player.invincible = 20;
                         game.screenShake = 10;
                         
