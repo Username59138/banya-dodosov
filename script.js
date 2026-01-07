@@ -403,7 +403,6 @@ const PLAYER_PHRASES = [
 // Фразы врагов (со звуками и без)
 const ENEMY_PHRASES = [
     { text: "Ты бл*дь, д*лбаёб нах*й?", hasSound: true },
-    { text: "Я уже синий!", hasSound: false },
     { text: "Омайгад", hasSound: true },
 ];
 
