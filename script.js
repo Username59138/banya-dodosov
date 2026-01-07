@@ -434,15 +434,15 @@ const DIFFICULTY = [
 ];
 
 const ENEMY_TYPES = [
-    { name: 'Дод', emoji: '🔥', color: '#8b4513' },
-    { name: 'Прадод', emoji: '👴🔥', color: '#654321' },
-    { name: 'Прапрадод', emoji: '👴👴', color: '#4a3520' },
-    { name: 'Супер Прапрадод', emoji: '⭐👴', color: '#3d2914' },
-    { name: 'Додос', emoji: '🦤', color: '#2d1f0f' },
-    { name: 'Ультрадодос', emoji: '💀🦤', color: '#1a1209' },
-    { name: 'Ультра Омега', emoji: '🌟💀', color: '#0a0604' },
-    { name: 'БОСС БАНИ', emoji: '👑🔥', color: '#000000' },
-    { name: 'БОГ ПАРА', emoji: '☠️👑', color: '#220000' }
+    { name: 'Дод', image: 'dod', color: '#8b4513' },
+    { name: 'Прадод', image: 'pradod', color: '#654321' },
+    { name: 'Прапрадод', image: 'prapradod', color: '#4a3520' },
+    { name: 'Супер Прапрадод', image: 'omegaSuper', color: '#3d2914' },
+    { name: 'Додос', image: 'dod', color: '#2d1f0f' },
+    { name: 'Ультрадодос', image: 'pradod', color: '#1a1209' },
+    { name: 'Ультра Омега', image: 'prapradod', color: '#0a0604' },
+    { name: 'БОСС БАНИ', image: 'omegaSuper', color: '#000000' },
+    { name: 'БОГ ПАРА', image: 'omegaSuper', color: '#220000' }
 ];
 
 let game = {
@@ -1001,28 +1001,76 @@ function render() {
         ctx.shadowBlur = 0;
     });
     
+    // ============ ОТРИСОВКА ВРАГОВ С КАРТИНКАМИ ============
     game.enemies.forEach((enemy, idx) => {
         const pulseSize = Math.sin(Date.now() / 200 + idx) * 3;
         
         ctx.shadowColor = '#ff0000';
         ctx.shadowBlur = 20 + game.player.formIndex * 3;
         
+        // Фоновый круг/аура врага
         ctx.fillStyle = enemy.type.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.size + pulseSize + 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Внутренний огненный круг
+        ctx.fillStyle = `rgba(255, 100, 0, 0.6)`;
         ctx.beginPath();
         ctx.arc(enemy.x, enemy.y, enemy.size + pulseSize, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = `rgba(255, 100, 0, 0.5)`;
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.size * 0.7, 0, Math.PI * 2);
-        ctx.fill();
+        // Отрисовка изображения врага
+        const enemyImage = IMAGES[enemy.type.image];
+        
+        if (enemyImage && enemyImage.complete && enemyImage.naturalWidth > 0) {
+            const imgSize = enemy.size * 2.2;
+            
+            // Круглая маска для картинки
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size - 3, 0, Math.PI * 2);
+            ctx.clip();
+            
+            ctx.drawImage(
+                enemyImage,
+                enemy.x - imgSize / 2,
+                enemy.y - imgSize / 2,
+                imgSize,
+                imgSize
+            );
+            ctx.restore();
+            
+            // Огненная обводка вокруг картинки
+            ctx.strokeStyle = '#ff4500';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size - 2, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Дополнительное свечение для высоких уровней
+            if (game.player.formIndex >= 4) {
+                ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + Math.sin(Date.now() / 100) * 0.3})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size + 8, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        } else {
+            // Fallback - рисуем круг с именем если картинка не загружена
+            ctx.fillStyle = '#ff6600';
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12 + game.player.formIndex}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(enemy.type.name.charAt(0), enemy.x, enemy.y);
+        }
         
         ctx.shadowBlur = 0;
-        
-        ctx.font = `${18 + game.player.formIndex * 2}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(enemy.type.emoji, enemy.x, enemy.y);
     });
     
     const form = FORMS[game.player.formIndex];
@@ -1062,7 +1110,7 @@ function render() {
         
         if (playerImage && playerImage.complete && playerImage.naturalWidth > 0) {
             // Рисуем картинку
-            const imgSize = form.size * 3; // Размер картинки
+            const imgSize = form.size * 3;
             
             // Круглая маска для картинки
             ctx.save();
@@ -1117,7 +1165,7 @@ function render() {
     ctx.fillStyle = '#fff';
     ctx.font = '8px "Press Start 2P"';
     ctx.textAlign = 'center';
-    ctx.fillText(`${Math.floor(game.player.health)}/${game.player.maxHealth}`, 85, 18);
+    ctx.fillText(`${Math.floor(game.player.health)}/${game.player.maxHealth}`, 85, 22);
     
     ctx.textAlign = 'left';
     ctx.font = '10px "Press Start 2P"';
