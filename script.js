@@ -207,7 +207,7 @@ function getShieldDuration() {
 }
 
 function getShieldCooldown() {
-    return 15 - saveData.upgrades.cooldown * 2;
+    return 15 - saveData.upgrades.cooldown * 0.5;
 }
 
 
@@ -314,11 +314,11 @@ function resetJoystick() {
 function activateShield() {
     if (!game.running || game.paused) return;
     if (game.shieldCooldown > 0) return;
-    const heal_procent = getShieldHeal();
+    const heal = getShieldHeal();
 
     game.shieldActive = getShieldDuration() * 60;
     game.shieldCooldown = getShieldCooldown() * 60;
-    game.player.health = Math.min(game.player.maxHealth, game.player.health + (game.player.maxHealth / 100) * heal_procent);
+    game.player.health = Math.min(game.player.maxHealth, game.player.health + heal);
 
     const btn = document.getElementById('shieldBtn');
     btn.classList.add('on-cooldown');
