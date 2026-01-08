@@ -84,7 +84,8 @@ function playSound(sound) {
         console.warn('Ошибка воспроизведения звука:', e);
     }
 }
-
+// Инициализация времени
+let lastFrameTime = 0;
 // Инициализация ресурсов
 loadImages();
 loadSounds();
@@ -316,8 +317,8 @@ function activateShield() {
     if (game.shieldCooldown > 0) return;
     const heal = getShieldHeal();
 
-    game.shieldActive = getShieldDuration() * 60;
-    game.shieldCooldown = getShieldCooldown() * 60;
+    game.shieldActive = getShieldDuration();
+    game.shieldCooldown = getShieldCooldown();
     game.player.health = Math.min(game.player.maxHealth, game.player.health + heal);
 
     const btn = document.getElementById('shieldBtn');
@@ -370,7 +371,7 @@ function togglePause() {
         game.lastPlayerPhrase += pauseDuration;
         game.lastEnemyPhrase += pauseDuration;
         
-        gameLoop();
+        requestAnimationFrame(gameLoop);
     }
 }
 
@@ -417,7 +418,7 @@ const PLAYER_PHRASES = [
 
 // Фразы врагов (со звуками)
 const ENEMY_PHRASES = [
-    { text: "Ты блядь, долбаёб нахай?", hasSound: true },
+    { text: "Ты блядь, долбаёб нахуй?", hasSound: true },
     { text: "Омайгад", hasSound: true },
 ];
 
@@ -455,9 +456,9 @@ const ENEMY_TYPES = [
     { name: 'Супер Прапрадод', image: 'prapradod', color: '#3d2914' },
     { name: 'Додос', image: 'prapradod', color: '#2d1f0f' },
     { name: 'Ультрадодос', image: 'prapradod', color: '#1a1209' },
-    { name: 'Ультра Омега', image: 'prapradod', color: '#0a0604' },
-    { name: 'БОСС БАНИ', image: 'omegaSuper', color: '#000000' },
-    { name: 'БОГ ПАРА', image: 'omegaSuper', color: '#220000' }
+    { name: 'Ультра Омега Додос', image: 'prapradod', color: '#0a0604' },
+    { name: 'Супер омега ультра прапрадодос', image: 'omegaSuper', color: '#000000' },
+    { name: 'Богододос', image: 'omegaSuper', color: '#220000' }
 ];
 
 let game = {
@@ -546,7 +547,6 @@ function goToMenu() {
     document.getElementById('pauseBtn').classList.remove('visible');
     updateShopUI();
 }
-
 function startGame() {
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('gameScreen').classList.remove('hidden');
@@ -561,14 +561,23 @@ function startGame() {
     game = {
         running: true,
         paused: false,
-        player: { x: 100, y: 250, vx: 0, vy: 0, health: maxHP, maxHealth: maxHP, formIndex: 0, invincible: 0 },
+        player: { 
+            x: 100, 
+            y: 250, 
+            vx: 0, 
+            vy: 0, 
+            health: maxHP, 
+            maxHealth: maxHP, 
+            formIndex: 0, 
+            invincible: 0 
+        },
         temperature: 0,
         enemies: [],
         projectiles: [],
         particles: [],
         keys: {},
         tempRate: 50,
-        screenShake: 0,
+        screenShake: 0,   
         lastPlayerPhrase: Date.now(),
         lastEnemyPhrase: Date.now(),
         sessionCoins: 0,
@@ -582,10 +591,14 @@ function startGame() {
     
     spawnEnemies();
     updateUI();
-    gameLoop();
+    
+    // Сбрасываем время для первого кадра
+    lastFrameTime = 0;
+    requestAnimationFrame(gameLoop);
     
     setTimeout(() => playerSpeak(), 1000);
 }
+
 
 function spawnEnemies() {
     game.enemies = [];
@@ -621,10 +634,10 @@ function updateUI() {
     const shieldStatus = document.getElementById('shieldStatus');
     const shieldBtn = document.getElementById('shieldBtn');
     if (game.shieldActive > 0) {
-        shieldStatus.textContent = `${Math.ceil(game.shieldActive / 60)}с`;
+        shieldStatus.textContent = `${Math.ceil(game.shieldActive)}с`;  
         shieldStatus.className = 'text-green-300';
     } else if (game.shieldCooldown > 0) {
-        shieldStatus.textContent = `${Math.ceil(game.shieldCooldown / 60)}с`;
+        shieldStatus.textContent = `${Math.ceil(game.shieldCooldown)}с`; 
         shieldStatus.className = 'text-gray-500';
         shieldBtn.classList.add('on-cooldown');
     } else {
@@ -645,10 +658,18 @@ function updateUI() {
     document.getElementById('difficultyInfo').textContent = `Сложность: ${stars}`;
 }
 
-function gameLoop() {
+function gameLoop(currentTime) {
     if (!game.running || game.paused) return;
     
-    update();
+    // Вычисляем deltaTime в секундах
+    if (lastFrameTime === 0) lastFrameTime = currentTime;
+    const deltaTime = (currentTime - lastFrameTime) / 1000;
+    lastFrameTime = currentTime;
+    
+    // Ограничиваем deltaTime чтобы избежать огромных скачков (например, после alt+tab)
+    const dt = Math.min(deltaTime, 0.1);
+    
+    update(dt);
     render();
     updateUI();
     
@@ -750,14 +771,16 @@ function createProjectile(x, y, angle, diff) {
     };
 }
 
-function update() {
+function update(dt) {
     const form = FORMS[game.player.formIndex];
     const diff = DIFFICULTY[Math.min(game.player.formIndex, DIFFICULTY.length - 1)];
     
-    if (game.shieldActive > 0) game.shieldActive--;
-    if (game.shieldCooldown > 0) game.shieldCooldown--;
+    // Таймеры уменьшаются на dt (в секундах)
+    if (game.shieldActive > 0) game.shieldActive -= dt;
+    if (game.shieldCooldown > 0) game.shieldCooldown -= dt;
     
-    const speed = 5 + game.player.formIndex * 0.3;
+    // Базовая скорость (пиксели в секунду)
+    const baseSpeed = 300 + game.player.formIndex * 18;
     
     let inputX = 0;
     let inputY = 0;
@@ -773,28 +796,33 @@ function update() {
         inputY = joystick.moveY;
     }
     
+    // Применяем ускорение
     if (Math.abs(inputX) > 0.1) {
-        game.player.vx = inputX * speed;
+        game.player.vx = inputX * baseSpeed;
     } else {
-        game.player.vx *= 0.85;
+        // Торможение с учётом dt
+        game.player.vx *= Math.pow(0.85, dt * 60);
     }
     
     if (Math.abs(inputY) > 0.1) {
-        game.player.vy = inputY * speed;
+        game.player.vy = inputY * baseSpeed;
     } else {
-        game.player.vy *= 0.85;
+        game.player.vy *= Math.pow(0.85, dt * 60);
     }
     
-    game.player.x += game.player.vx;
-    game.player.y += game.player.vy;
+    // Движение с учётом dt
+    game.player.x += game.player.vx * dt;
+    game.player.y += game.player.vy * dt;
     
     game.player.x = Math.max(form.size, Math.min(canvas.width - form.size - 150, game.player.x));
     game.player.y = Math.max(form.size, Math.min(canvas.height - form.size, game.player.y));
     
+    // Прирост температуры с учётом dt
     const xpBonus = getXPMultiplier();
-    game.temperature += ((game.tempRate + game.player.formIndex * 25) / 60) * xpBonus;
+    game.temperature += (game.tempRate + game.player.formIndex * 25) * xpBonus * dt;
     
-    if (Math.random() < 0.02 + game.player.formIndex * 0.01) {
+    // Монеты (вероятность пересчитана для dt)
+    if (Math.random() < (0.02 + game.player.formIndex * 0.01) * dt * 60) {
         const coinAmount = 1 + game.player.formIndex;
         game.sessionCoins += coinAmount;
         showCoinPopup(game.player.x + (Math.random() - 0.5) * 30, game.player.y - 20, coinAmount);
@@ -808,7 +836,7 @@ function update() {
     if (game.temperature >= form.targetTemp) {
         if (game.player.formIndex < FORMS.length - 1) {
             game.player.formIndex++;
-            game.player.invincible = 180;
+            game.player.invincible = 3;  // 3 секунды неуязвимости
             game.player.health = Math.min(game.player.maxHealth, game.player.health + 30);
             game.tempRate *= 1.8;
             
@@ -824,12 +852,13 @@ function update() {
                     y: game.player.y,
                     vx: (Math.random() - 0.5) * 15,
                     vy: (Math.random() - 0.5) * 15,
-                    life: 90,
+                    life: 1.5,  // СЕКУНДЫ
+                    maxLife: 1.5,
                     color: FORMS[game.player.formIndex].color
                 });
             }
             
-            game.screenShake = 20;
+            game.screenShake = 0.33;  // СЕКУНДЫ
             
             setTimeout(() => {
                 if (game.running) {
@@ -850,11 +879,15 @@ function update() {
         }
     }
     
+    // Враги
     game.enemies.forEach((enemy, idx) => {
         if (Math.abs(enemy.y - enemy.targetY) < 10) {
             enemy.targetY = 50 + Math.random() * (canvas.height - 100);
         }
-        enemy.y += (enemy.targetY - enemy.y) * diff.enemyMoveSpeed;
+        
+        // Скорость движения врага (базовая * dt)
+        const moveSpeed = diff.enemyMoveSpeed * 60;  // Преобразуем в скорость/сек
+        enemy.y += (enemy.targetY - enemy.y) * moveSpeed * dt;
         
         if (game.player.formIndex >= 4) {
             enemy.x = canvas.width - 80 + Math.sin(Date.now() / 500 + idx) * 30;
@@ -883,9 +916,12 @@ function update() {
         }
     });
     
+    // Снаряды - скорость * dt
+    const projectileSpeedMultiplier = 60;  // Базовый множитель для сохранения скорости
+    
     game.projectiles = game.projectiles.filter(p => {
-        p.x += p.vx;
-        p.y += p.vy;
+        p.x += p.vx * projectileSpeedMultiplier * dt;
+        p.y += p.vy * projectileSpeedMultiplier * dt;
         
         if (game.player.invincible <= 0 && game.shieldActive <= 0) {
             const dx = p.x - game.player.x;
@@ -898,8 +934,8 @@ function update() {
                 } else {
                     game.player.health = 0;
                 }
-                game.player.invincible = 20;
-                game.screenShake = 10;
+                game.player.invincible = 0.33;  // СЕКУНДЫ
+                game.screenShake = 0.17;        // СЕКУНДЫ
                 
                 if (Math.random() < 0.25) {
                     const hitPhrases = ["Ай, бл*ть!", "Сука!", "Больно!", "П*здец!"];
@@ -912,7 +948,8 @@ function update() {
                         y: game.player.y,
                         vx: (Math.random() - 0.5) * 8,
                         vy: (Math.random() - 0.5) * 8,
-                        life: 30,
+                        life: 0.5,    // СЕКУНДЫ
+                        maxLife: 0.5,
                         color: '#ff0000'
                     });
                 }
@@ -934,7 +971,8 @@ function update() {
                         y: p.y,
                         vx: (Math.random() - 0.5) * 6,
                         vy: (Math.random() - 0.5) * 6,
-                        life: 20,
+                        life: 0.33,
+                        maxLife: 0.33,
                         color: '#00bfff'
                     });
                 }
@@ -945,17 +983,19 @@ function update() {
         return p.x > -50 && p.x < canvas.width + 50 && p.y > -50 && p.y < canvas.height + 50;
     });
     
+    // Частицы с учётом dt
     game.particles = game.particles.filter(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.98;
-        p.vy *= 0.98;
-        p.life--;
+        p.x += p.vx * 60 * dt;
+        p.y += p.vy * 60 * dt;
+        p.vx *= Math.pow(0.98, dt * 60);
+        p.vy *= Math.pow(0.98, dt * 60);
+        p.life -= dt;
         return p.life > 0;
     });
     
-    if (game.player.invincible > 0) game.player.invincible--;
-    if (game.screenShake > 0) game.screenShake--;
+    // Таймеры в секундах
+    if (game.player.invincible > 0) game.player.invincible -= dt;
+    if (game.screenShake > 0) game.screenShake -= dt;
 }
 
 // ============ РЕНДЕРИНГ С КАРТИНКАМИ ============
@@ -963,9 +1003,10 @@ function update() {
 function render() {
     ctx.save();
     if (game.screenShake > 0) {
+        const shakeIntensity = game.screenShake * 30;
         ctx.translate(
-            (Math.random() - 0.5) * game.screenShake,
-            (Math.random() - 0.5) * game.screenShake
+            (Math.random() - 0.5) * shakeIntensity,
+            (Math.random() - 0.5) * shakeIntensity
         );
     }
     
@@ -991,10 +1032,10 @@ function render() {
     }
     
     game.particles.forEach(p => {
-        ctx.globalAlpha = p.life / 90;
+        ctx.globalAlpha = p.life / p.maxLife; 
         ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 4 + (90 - p.life) / 20, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 4 + (1 - p.life / p.maxLife) * 4, 0, Math.PI * 2);
         ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -1090,7 +1131,7 @@ function render() {
     
     const form = FORMS[game.player.formIndex];
     
-    if (game.player.invincible <= 0 || Math.floor(game.player.invincible / 4) % 2 === 0) {
+    if (game.player.invincible <= 0 || Math.floor(game.player.invincible * 15) % 2 === 0) {
         // Эффект щита
         if (game.shieldActive > 0) {
             ctx.shadowColor = '#00bfff';
@@ -1194,10 +1235,10 @@ function render() {
     
     if (game.shieldCooldown > 0 && game.shieldActive <= 0) {
         ctx.fillStyle = '#888';
-        ctx.fillText(`🛡️ ${Math.ceil(game.shieldCooldown / 60)}с`, canvas.width - 100, 20);
+        ctx.fillText(`🛡️ ${Math.ceil(game.shieldCooldown)}с`, canvas.width - 100, 20);
     } else if (game.shieldActive > 0) {
         ctx.fillStyle = '#00bfff';
-        ctx.fillText(`🛡️ ${Math.ceil(game.shieldActive / 60)}с`, canvas.width - 100, 20);
+        ctx.fillText(`🛡️ ${Math.ceil(game.shieldActive)}с`, canvas.width - 100, 20);
     } else {
         ctx.fillStyle = '#00ff00';
         ctx.fillText(`🛡️ ГОТОВ`, canvas.width - 100, 20);
